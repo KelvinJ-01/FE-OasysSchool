@@ -1,122 +1,101 @@
-import { useState, FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
-import Label from "../form/Label";
-import Input from "../form/input/InputField";
-import Button from "../ui/button/Button";
-import { ArrowRightIcon, EnvelopeIcon } from "../../icons";
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Mail, ArrowRight } from 'lucide-react';
+import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
+import type { PasswordResetRequest, MessageResponse } from '../../types/auth';
 
 export default function ResetPasswordForm() {
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validate = (): boolean => {
+  function validate(): boolean {
     if (!email.trim()) {
-      setError("Email wajib diisi.");
+      setError('Email wajib diisi.');
       return false;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Format email tidak valid.");
+      setError('Format email tidak valid.');
       return false;
     }
     setError(undefined);
     return true;
-  };
+  }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
     setFormError(null);
-
     if (!validate()) return;
 
     try {
       setIsSubmitting(true);
-      // TODO: ganti dengan pemanggilan endpoint pengiriman kode reset
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      navigate("/verify-code", { state: { email } });
+      const payload: PasswordResetRequest = { email: email.trim(), platform: 'web' };
+      await apiClient.post<MessageResponse>('/auth/password-resets', payload);
+      navigate('/verify-code', { state: { email, purpose: 'password_reset' } });
     } catch (err) {
-      setFormError(
-        err instanceof Error
-          ? err.message
-          : "Gagal mengirim kode. Silakan coba lagi.",
-      );
+      setFormError(getApiErrorMessage(err, 'Gagal mengirim kode. Silakan coba lagi.'));
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
   return (
-    <div className="w-full max-w-[400px] py-10">
-      <div className="mb-8 flex flex-col items-center text-center">
-        <img
-          src="/images/logo/Oasys_School_Logo_1.webp"
-          alt="Oasys School"
-          className="mb-6 h-24 w-auto"
-        />
-        <h1 className="mb-1.5 text-title-sm font-semibold text-gray-800 dark:text-white/90">
-          Lupa kata sandi?
-        </h1>
-        <p className="text-theme-sm text-gray-500 dark:text-gray-400">
-          Masukkan email akun Anda, kami akan mengirimkan kode verifikasi
-          6 digit.
-        </p>
-      </div>
+    <div className="font-jakarta">
+      <h1 className="text-[22px] font-semibold text-gray-900">Lupa kata sandi?</h1>
+      <p className="mt-1.5 text-[14px] text-gray-500">
+        Masukkan email akun Anda, kami akan mengirimkan kode verifikasi 6 digit.
+      </p>
 
       {formError && (
-        <div
-          role="alert"
-          className="mb-5 rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-theme-sm text-error-700 dark:border-error-800 dark:bg-error-500/10 dark:text-error-400"
-        >
+        <div role="alert" className="mt-5 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] leading-relaxed text-error-700">
           {formError}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} noValidate>
-        <div className="space-y-5">
-          <div>
-            <Label htmlFor="email">
-              Email <span className="text-error-500">*</span>
-            </Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-gray-400">
-                <EnvelopeIcon className="size-5" />
-              </span>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="nama@oasysschool.sch.id"
-                value={email}
-                error={Boolean(error)}
-                hint={error}
-                className="pl-11"
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
+      <form onSubmit={handleSubmit} className="mt-6 space-y-5" noValidate>
+        <div>
+          <label htmlFor="email" className="mb-1.5 block text-[13.5px] font-medium text-gray-900">
+            Email
+          </label>
+          <div className="relative">
+            <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-gray-400">
+              <Mail size={18} aria-hidden="true" />
+            </span>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="nama@oasysschool.sch.id"
+              className={`h-11 w-full rounded-md border bg-white pl-11 pr-3.5 text-[14px] text-gray-900 outline-none transition-shadow focus:ring-2 ${
+                error ? 'border-error-300 focus:border-error-500 focus:ring-error-500/20' : 'border-gray-300 focus:border-brand-500 focus:ring-brand-500/20'
+              }`}
+            />
           </div>
-
-          <div>
-            <Button
-              className="w-full justify-center"
-              size="sm"
-              disabled={isSubmitting}
-              endIcon={!isSubmitting && <ArrowRightIcon className="size-4" />}
-            >
-              {isSubmitting ? "Mengirim..." : "Kirim Kode Verifikasi"}
-            </Button>
-          </div>
+          {error && <p className="mt-1.5 text-[12.5px] text-error-600">{error}</p>}
         </div>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-md bg-brand-500 text-[14px] font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
+        >
+          {isSubmitting ? 'Mengirim...' : (
+            <>
+              Kirim Kode Verifikasi
+              <ArrowRight size={16} aria-hidden="true" />
+            </>
+          )}
+        </button>
       </form>
 
-      <p className="mt-6 text-center text-theme-sm text-gray-500 dark:text-gray-400">
-        Ingat kata sandi Anda?{" "}
-        <Link
-          to="/signin"
-          className="font-medium text-brand-500 hover:text-brand-600"
-        >
+      <p className="mt-6 text-center text-[13px] text-gray-500">
+        Ingat kata sandi Anda?{' '}
+        <Link to="/signin" className="font-medium text-brand-500 hover:underline">
           Kembali masuk
         </Link>
       </p>

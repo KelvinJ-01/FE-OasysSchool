@@ -1,11 +1,10 @@
-import { useState, FormEvent } from "react";
-import { useNavigate } from "react-router";
-import Label from "../form/Label";
-import Input from "../form/input/InputField";
-import Button from "../ui/button/Button";
-import { Modal } from "../ui/modal";
-import { useModal } from "../../hooks/useModal";
-import { CheckCircleIcon, EyeCloseIcon, EyeIcon, LockIcon } from "../../icons";
+import { useEffect, useState, type FormEvent } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Lock, Eye, EyeOff, CircleCheck } from 'lucide-react';
+import { Modal } from '../ui/modal';
+import { useModal } from '../../hooks/useModal';
+import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
+import type { PasswordResetConfirmRequest, MessageResponse } from '../../types/auth';
 
 interface FormValues {
   password: string;
@@ -17,196 +16,179 @@ interface FormErrors {
   confirmPassword?: string;
 }
 
+interface LocationState {
+  email?: string;
+  resetToken?: string;
+}
+
 export default function NewPasswordForm() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { email, resetToken } = (location.state as LocationState | null) ?? {};
   const { isOpen, openModal, closeModal } = useModal();
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [values, setValues] = useState<FormValues>({
-    password: "",
-    confirmPassword: "",
-  });
+  const [values, setValues] = useState<FormValues>({ password: '', confirmPassword: '' });
   const [errors, setErrors] = useState<FormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
 
-  const validate = (): boolean => {
+  useEffect(() => {
+    if (!resetToken) {
+      navigate('/reset-password', { replace: true });
+    }
+  }, [resetToken, navigate]);
+
+  function validate(): boolean {
     const nextErrors: FormErrors = {};
-
     if (!values.password) {
-      nextErrors.password = "Kata sandi wajib diisi.";
+      nextErrors.password = 'Kata sandi wajib diisi.';
     } else if (values.password.length < 8) {
-      nextErrors.password = "Kata sandi minimal 8 karakter.";
+      nextErrors.password = 'Kata sandi minimal 8 karakter.';
     }
-
     if (values.confirmPassword !== values.password) {
-      nextErrors.confirmPassword = "Konfirmasi kata sandi tidak cocok.";
+      nextErrors.confirmPassword = 'Konfirmasi kata sandi tidak cocok.';
     }
-
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
-  };
+  }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
     setFormError(null);
-
-    if (!validate()) return;
+    if (!validate() || !resetToken) return;
 
     try {
       setIsSubmitting(true);
-      // TODO: ganti dengan pemanggilan endpoint ubah kata sandi sesungguhnya
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const payload: PasswordResetConfirmRequest = { resetToken, newPassword: values.password };
+      await apiClient.post<MessageResponse>('/auth/password-resets/confirm', payload);
       openModal();
     } catch (err) {
-      setFormError(
-        err instanceof Error
-          ? err.message
-          : "Gagal mengubah kata sandi. Silakan coba lagi.",
-      );
+      const code = getApiErrorCode(err);
+      if (code === 'RESET_TOKEN_INVALID_OR_EXPIRED') {
+        setFormError('Sesi reset kata sandi sudah kedaluwarsa. Silakan ulangi dari awal.');
+      } else if (code === 'PASSWORD_POLICY_VIOLATION') {
+        setErrors({ password: 'Kata sandi belum memenuhi kebijakan keamanan yang berlaku.' });
+      } else {
+        setFormError(getApiErrorMessage(err, 'Gagal mengubah kata sandi. Silakan coba lagi.'));
+      }
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
-  const handleGoToSignIn = () => {
+  function handleGoToSignIn() {
     closeModal();
-    navigate("/signin");
-  };
+    navigate('/signin');
+  }
+
+  if (!resetToken) {
+    return null;
+  }
 
   return (
-    <div className="w-full max-w-[400px] py-10">
-      <div className="mb-8 flex flex-col items-center text-center">
-        <img
-          src="/images/logo/Oasys_School_Logo_1.webp"
-          alt="Oasys School"
-          className="mb-6 h-24 w-auto"
-        />
-        <h1 className="mb-1.5 text-title-sm font-semibold text-gray-800 dark:text-white/90">
-          Buat kata sandi baru
-        </h1>
-        <p className="text-theme-sm text-gray-500 dark:text-gray-400">
-          Kata sandi baru harus berbeda dari kata sandi yang pernah
-          digunakan sebelumnya.
-        </p>
-      </div>
+    <div className="font-jakarta">
+      <h1 className="text-[22px] font-semibold text-gray-900">Buat kata sandi baru</h1>
+      <p className="mt-1.5 text-[14px] text-gray-500">
+        Kata sandi baru harus berbeda dari kata sandi yang pernah digunakan sebelumnya
+        {email ? <> untuk <span className="font-medium text-gray-700">{email}</span></> : ''}.
+      </p>
 
       {formError && (
-        <div
-          role="alert"
-          className="mb-5 rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-theme-sm text-error-700 dark:border-error-800 dark:bg-error-500/10 dark:text-error-400"
-        >
+        <div role="alert" className="mt-5 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] leading-relaxed text-error-700">
           {formError}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} noValidate>
-        <div className="space-y-5">
-          <div>
-            <Label htmlFor="password">
-              Kata Sandi Baru <span className="text-error-500">*</span>
-            </Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-gray-400">
-                <LockIcon className="size-5" />
-              </span>
-              <Input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Minimal 8 karakter"
-                value={values.password}
-                error={Boolean(errors.password)}
-                hint={errors.password}
-                className="pr-11 pl-11"
-                onChange={(e) =>
-                  setValues((prev) => ({ ...prev, password: e.target.value }))
-                }
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={
-                  showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"
-                }
-                className="absolute top-1/2 right-3.5 z-10 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                {showPassword ? (
-                  <EyeIcon className="size-5" />
-                ) : (
-                  <EyeCloseIcon className="size-5" />
-                )}
-              </button>
-            </div>
+      <form onSubmit={handleSubmit} className="mt-6 space-y-5" noValidate>
+        <div>
+          <label htmlFor="password" className="mb-1.5 block text-[13.5px] font-medium text-gray-900">
+            Kata sandi baru
+          </label>
+          <div className="relative">
+            <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-gray-400">
+              <Lock size={18} aria-hidden="true" />
+            </span>
+            <input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={values.password}
+              onChange={(e) => setValues((prev) => ({ ...prev, password: e.target.value }))}
+              placeholder="Minimal 8 karakter"
+              className={`h-11 w-full rounded-md border bg-white pl-11 pr-11 text-[14px] text-gray-900 outline-none transition-shadow focus:ring-2 ${
+                errors.password ? 'border-error-300 focus:border-error-500 focus:ring-error-500/20' : 'border-gray-300 focus:border-brand-500 focus:ring-brand-500/20'
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500"
+            >
+              {showPassword ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
+            </button>
           </div>
-
-          <div>
-            <Label htmlFor="confirmPassword">
-              Konfirmasi Kata Sandi <span className="text-error-500">*</span>
-            </Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-gray-400">
-                <LockIcon className="size-5" />
-              </span>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Ulangi kata sandi baru"
-                value={values.confirmPassword}
-                error={Boolean(errors.confirmPassword)}
-                hint={errors.confirmPassword}
-                className="pr-11 pl-11"
-                onChange={(e) =>
-                  setValues((prev) => ({
-                    ...prev,
-                    confirmPassword: e.target.value,
-                  }))
-                }
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword((prev) => !prev)}
-                aria-label={
-                  showConfirmPassword
-                    ? "Sembunyikan kata sandi"
-                    : "Tampilkan kata sandi"
-                }
-                className="absolute top-1/2 right-3.5 z-10 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                {showConfirmPassword ? (
-                  <EyeIcon className="size-5" />
-                ) : (
-                  <EyeCloseIcon className="size-5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <Button className="w-full justify-center" size="sm" disabled={isSubmitting}>
-              {isSubmitting ? "Menyimpan..." : "Simpan Kata Sandi"}
-            </Button>
-          </div>
+          {errors.password && <p className="mt-1.5 text-[12.5px] text-error-600">{errors.password}</p>}
         </div>
+
+        <div>
+          <label htmlFor="confirmPassword" className="mb-1.5 block text-[13.5px] font-medium text-gray-900">
+            Konfirmasi kata sandi
+          </label>
+          <div className="relative">
+            <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-gray-400">
+              <Lock size={18} aria-hidden="true" />
+            </span>
+            <input
+              id="confirmPassword"
+              type={showConfirmPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={values.confirmPassword}
+              onChange={(e) => setValues((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+              placeholder="Ulangi kata sandi baru"
+              className={`h-11 w-full rounded-md border bg-white pl-11 pr-11 text-[14px] text-gray-900 outline-none transition-shadow focus:ring-2 ${
+                errors.confirmPassword ? 'border-error-300 focus:border-error-500 focus:ring-error-500/20' : 'border-gray-300 focus:border-brand-500 focus:ring-brand-500/20'
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((v) => !v)}
+              aria-label={showConfirmPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500"
+            >
+              {showConfirmPassword ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
+            </button>
+          </div>
+          {errors.confirmPassword && <p className="mt-1.5 text-[12.5px] text-error-600">{errors.confirmPassword}</p>}
+        </div>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex h-11 w-full items-center justify-center rounded-md bg-brand-500 text-[14px] font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
+        >
+          {isSubmitting ? 'Menyimpan...' : 'Simpan Kata Sandi'}
+        </button>
       </form>
 
       <Modal isOpen={isOpen} onClose={closeModal} className="m-4 max-w-[420px]">
-        <div className="flex flex-col items-center px-2 py-6 text-center">
-          <div className="mb-5 flex size-16 items-center justify-center rounded-full bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400">
-            <CheckCircleIcon className="size-9" />
+        <div className="flex flex-col items-center px-2 py-6 text-center font-jakarta">
+          <div className="mb-5 flex size-16 items-center justify-center rounded-full bg-secondary-50 text-secondary-600">
+            <CircleCheck size={36} aria-hidden="true" />
           </div>
-          <h4 className="mb-2 text-title-sm font-semibold text-gray-800 dark:text-white/90">
-            Kata sandi berhasil diubah
-          </h4>
-          <p className="mb-6 text-theme-sm text-gray-500 dark:text-gray-400">
-            Kata sandi akun Anda telah berhasil diperbarui. Silakan masuk
-            kembali menggunakan kata sandi baru Anda.
+          <h4 className="mb-2 text-[18px] font-semibold text-gray-900">Kata sandi berhasil diubah</h4>
+          <p className="mb-6 text-[14px] text-gray-500">
+            Kata sandi akun Anda telah berhasil diperbarui. Silakan masuk kembali menggunakan kata sandi baru Anda.
           </p>
-          <Button className="w-full justify-center" size="sm" onClick={handleGoToSignIn}>
+          <button
+            type="button"
+            onClick={handleGoToSignIn}
+            className="flex h-11 w-full items-center justify-center rounded-md bg-brand-500 text-[14px] font-medium text-white transition-colors hover:bg-brand-600"
+          >
             Masuk Sekarang
-          </Button>
+          </button>
         </div>
       </Modal>
     </div>

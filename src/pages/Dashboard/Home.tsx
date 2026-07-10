@@ -1,39 +1,20 @@
-import PageMeta from "../../components/common/PageMeta";
-import StatSummaryCards from "../../components/dashboard/StatSummaryCards";
-import WelcomeBanner from "../../components/dashboard/WelcomeBanner";
-import StudentDemographicsCard from "../../components/dashboard/StudentDemographicsCard";
-import TeacherAttendanceCard from "../../components/dashboard/TeacherAttendanceCard";
-import NoticeBoardCard from "../../components/dashboard/NoticeBoardCard";
-import MiniCalendarCard from "../../components/dashboard/MiniCalendarCard";
-import TeacherTableCard from "../../components/dashboard/TeacherTableCard";
+import PageMeta from '../../components/common/PageMeta';
+import { GreetingBanner } from '../../components/dashboard/GreetingBanner';
+import { AttendanceSummaryCards } from '../../components/dashboard/AttendanceSummaryCards';
+import { QuickLinks } from '../../components/dashboard/QuickLinks';
 
 export default function Home() {
   return (
     <>
-      <PageMeta
-        title="Dashboard | Oasys School"
-        description="Ringkasan operasional sekolah untuk admin dan staf Oasys School"
-      />
+      <PageMeta title="Dasbor | Oasys School" description="Ringkasan presensi hari ini" />
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-        {/* Kolom utama */}
-        <div className="flex flex-col gap-5 xl:col-span-8">
-          <StatSummaryCards />
+      <div className="space-y-6">
+        <GreetingBanner />
+        <AttendanceSummaryCards />
 
-          <WelcomeBanner />
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <StudentDemographicsCard />
-            <TeacherAttendanceCard />
-          </div>
-
-          <TeacherTableCard />
-        </div>
-
-        {/* Kolom samping */}
-        <div className="flex flex-col gap-5 xl:col-span-4">
-          <NoticeBoardCard />
-          <MiniCalendarCard />
+        <div>
+          <h2 className="mb-3 text-theme-sm font-medium text-gray-700 dark:text-gray-300">Akses Cepat</h2>
+          <QuickLinks />
         </div>
       </div>
     </>

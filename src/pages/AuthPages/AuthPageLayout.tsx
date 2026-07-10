@@ -1,5 +1,5 @@
-import { ReactNode } from "react";
-import ThemeTogglerTwo from "../../components/common/ThemeTogglerTwo";
+import type { ReactNode } from 'react';
+import { RollCallPanel } from '../../components/auth/RollCallPanel';
 
 interface AuthPageLayoutProps {
   children: ReactNode;
@@ -7,11 +7,13 @@ interface AuthPageLayoutProps {
 
 export default function AuthPageLayout({ children }: AuthPageLayoutProps) {
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-white px-4 dark:bg-gray-900">
-      {children}
+    <div className="min-h-screen lg:grid lg:grid-cols-[minmax(0,44%)_1fr]">
+      <div className="hidden lg:block">
+        <RollCallPanel />
+      </div>
 
-      <div className="fixed right-6 bottom-6 z-50 hidden sm:block">
-        <ThemeTogglerTwo />
+      <div className="flex min-h-screen flex-col justify-center bg-white px-6 py-12 font-jakarta sm:px-10 lg:px-16">
+        <div className="mx-auto w-full max-w-sm">{children}</div>
       </div>
     </div>
   );

@@ -1,0 +1,176 @@
+import { useEffect, useState, type FormEvent } from 'react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
+import { DataTable, type Column } from '../../components/common/DataTable';
+import { Modal } from '../../components/ui/modal';
+import { useModal } from '../../hooks/useModal';
+import type { PaginatedResponse } from '../../types/api';
+import type { Subject } from '../../types/entities';
+import type { CreateSubjectRequest, UpdateSubjectRequest } from '../../types/dataMaster';
+
+const PAGE_SIZE = 10;
+
+export default function SubjectsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'administrator';
+
+  const [items, setItems] = useState<Subject[]>([]);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const { isOpen, openModal, closeModal } = useModal();
+  const [editing, setEditing] = useState<Subject | null>(null);
+
+  function load() {
+    setIsLoading(true);
+    setListError(null);
+    apiClient
+      .get<PaginatedResponse<Subject>>('/subjects', { params: { page: pageNumber, pageSize: PAGE_SIZE } })
+      .then((res) => {
+        setItems(res.data.items);
+        setTotalPages(res.data.totalPages);
+      })
+      .catch((err) => setListError(getApiErrorMessage(err, 'Gagal memuat data mata pelajaran.')))
+      .finally(() => setIsLoading(false));
+  }
+
+  useEffect(load, [pageNumber]);
+
+  async function handleDelete(subject: Subject) {
+    setDeleteError(null);
+    if (!window.confirm(`Hapus mata pelajaran "${subject.name}"?`)) return;
+    try {
+      await apiClient.delete(`/subjects/${subject.id}`);
+      load();
+    } catch (err) {
+      setDeleteError(getApiErrorMessage(err, `Gagal menghapus "${subject.name}".`));
+    }
+  }
+
+  const columns: Column<Subject>[] = [
+    { key: 'name', header: 'Nama Mata Pelajaran', render: (s) => <span className="font-medium text-gray-800 dark:text-white/90">{s.name}</span> },
+    ...(isAdmin
+      ? [
+          {
+            key: 'actions',
+            header: '',
+            className: 'text-right',
+            render: (s: Subject) => (
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => { setEditing(s); openModal(); }} aria-label={`Ubah ${s.name}`} className="text-gray-400 hover:text-brand-500">
+                  <Pencil size={16} aria-hidden="true" />
+                </button>
+                <button type="button" onClick={() => handleDelete(s)} aria-label={`Hapus ${s.name}`} className="text-gray-400 hover:text-error-600">
+                  <Trash2 size={16} aria-hidden="true" />
+                </button>
+              </div>
+            ),
+          } as Column<Subject>,
+        ]
+      : []),
+  ];
+
+  return (
+    <div>
+      {isAdmin && (
+        <div className="mb-4 flex justify-end">
+          <button
+            type="button"
+            onClick={() => { setEditing(null); openModal(); }}
+            className="flex h-10 items-center gap-1.5 rounded-md bg-brand-500 px-4 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600"
+          >
+            <Plus size={16} aria-hidden="true" />
+            Tambah Mata Pelajaran
+          </button>
+        </div>
+      )}
+
+      {listError && <div role="alert" className="mb-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">{listError}</div>}
+      {deleteError && <div role="alert" className="mb-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">{deleteError}</div>}
+
+      <DataTable
+        columns={columns}
+        rows={items}
+        getRowId={(s) => s.id}
+        isLoading={isLoading}
+        emptyMessage="Belum ada data mata pelajaran."
+        pageNumber={pageNumber}
+        totalPages={totalPages}
+        onPageChange={setPageNumber}
+      />
+
+      {isAdmin && (
+        <SubjectFormModal
+          isOpen={isOpen}
+          onClose={closeModal}
+          subject={editing}
+          onSaved={() => { closeModal(); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function SubjectFormModal({ isOpen, onClose, subject, onSaved }: { isOpen: boolean; onClose: () => void; subject: Subject | null; onSaved: () => void }) {
+  const isEdit = !!subject;
+  const [name, setName] = useState(subject?.name ?? '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setName(subject?.name ?? '');
+    setError(null);
+  }, [subject, isOpen]);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      if (isEdit && subject) {
+        const payload: UpdateSubjectRequest = { name };
+        await apiClient.patch(`/subjects/${subject.id}`, payload);
+      } else {
+        const payload: CreateSubjectRequest = { name };
+        await apiClient.post('/subjects', payload);
+      }
+      onSaved();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Gagal menyimpan data mata pelajaran.'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} className="m-4 max-w-sm">
+      <div className="p-6">
+        <h3 className="mb-5 text-theme-sm font-semibold text-gray-800 dark:text-white/90">{isEdit ? 'Ubah Mata Pelajaran' : 'Tambah Mata Pelajaran'}</h3>
+        {error && <div role="alert" className="mb-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">{error}</div>}
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          <div>
+            <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Nama Mata Pelajaran</label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="mis. Matematika"
+              className="h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 text-[14px] text-gray-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="h-10 rounded-md px-4 text-theme-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5">Batal</button>
+            <button type="submit" disabled={isSubmitting} className="h-10 rounded-md bg-brand-500 px-5 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60">
+              {isSubmitting ? 'Menyimpan...' : 'Simpan'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}

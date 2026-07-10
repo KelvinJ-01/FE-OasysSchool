@@ -3,9 +3,9 @@ export type UserRole = 'developer' | 'administrator' | 'teacher' | 'parent';
 export type AllowedPlatform = 'web' | 'mobile' | 'all';
 
 export type TenantStatus = 'active' | 'suspended';
-export type AccountStatus = 'active' | 'suspended';
+export type AccountStatus = 'active' | 'suspended' | 'pending_verification';
 
-export type RegistrationChannel = 'web' | 'internal';
+export type RegistrationChannel = 'web' | 'mobile' | 'internal';
 
 export type StudentStatus = 'aktif' | 'pindah_sekolah' | 'keluar';
 
@@ -68,7 +68,6 @@ export interface ClassEntity {
 export interface AcademicTerm {
   id: string;
   schoolId: string;
-  /** Format "2025/2026". */
   yearLabel: string;
   semester: Semester;
   startDate: string;

@@ -16,7 +16,7 @@ export interface ApiErrorResponse {
     code: string;
     message: string;
     details?: ApiErrorDetail[];
-    traceId?: string;
+    traceId: string;
   };
 }
 

@@ -1,329 +1,257 @@
-import { useState, FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
-import Label from "../form/Label";
-import Input from "../form/input/InputField";
-import Checkbox from "../form/input/Checkbox";
-import Button from "../ui/button/Button";
-import {
-  ArrowRightIcon,
-  EnvelopeIcon,
-  EyeCloseIcon,
-  EyeIcon,
-  LockIcon,
-  UserIcon,
-} from "../../icons";
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { apiClient, getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '../../lib/apiClient';
+import type { ParentRegistrationRequest, ParentRegistrationResponse, PrivacyPolicyResponse } from '../../types/auth';
 
-interface SignUpFormValues {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  agree: boolean;
-}
-
-interface SignUpFormErrors {
-  firstName?: string;
-  lastName?: string;
+interface FieldErrors {
+  fullName?: string;
   email?: string;
+  phone?: string;
   password?: string;
-  confirmPassword?: string;
-  agree?: string;
+  studentNisn?: string;
+  consent?: string;
 }
 
-export default function SignUpForm() {
+export function SignUpForm() {
   const navigate = useNavigate();
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [studentNisn, setStudentNisn] = useState('');
+  const [consentAccepted, setConsentAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [values, setValues] = useState<SignUpFormValues>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    agree: false,
-  });
-  const [errors, setErrors] = useState<SignUpFormErrors>({});
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [policyVersion, setPolicyVersion] = useState<string | null>(null);
+  const [policyLoadError, setPolicyLoadError] = useState(false);
 
-  const validate = (): boolean => {
-    const nextErrors: SignUpFormErrors = {};
+  useEffect(() => {
+    apiClient
+      .get<PrivacyPolicyResponse>('/legal/privacy-policy')
+      .then((res) => setPolicyVersion(res.data.version))
+      .catch(() => setPolicyLoadError(true));
+  }, []);
 
-    if (!values.firstName.trim()) {
-      nextErrors.firstName = "Nama depan wajib diisi.";
-    }
+  function validateClientSide(): FieldErrors {
+    const errors: FieldErrors = {};
+    if (fullName.trim().length < 3) errors.fullName = 'Nama lengkap minimal 3 karakter.';
+    if (!/^\S+@\S+\.\S+$/.test(email)) errors.email = 'Format email tidak valid.';
+    if (password.length < 8) errors.password = 'Kata sandi minimal 8 karakter.';
+    if (!/^\d{10}$/.test(studentNisn)) errors.studentNisn = 'NISN harus terdiri dari 10 digit angka.';
+    if (!consentAccepted) errors.consent = 'Persetujuan wajib dicentang untuk melanjutkan.';
+    return errors;
+  }
 
-    if (!values.lastName.trim()) {
-      nextErrors.lastName = "Nama belakang wajib diisi.";
-    }
-
-    if (!values.email.trim()) {
-      nextErrors.email = "Email wajib diisi.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
-      nextErrors.email = "Format email tidak valid.";
-    }
-
-    if (!values.password) {
-      nextErrors.password = "Kata sandi wajib diisi.";
-    } else if (values.password.length < 8) {
-      nextErrors.password = "Kata sandi minimal 8 karakter.";
-    }
-
-    if (values.confirmPassword !== values.password) {
-      nextErrors.confirmPassword = "Konfirmasi kata sandi tidak cocok.";
-    }
-
-    if (!values.agree) {
-      nextErrors.agree = "Anda harus menyetujui syarat & ketentuan.";
-    }
-
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
     setFormError(null);
 
-    if (!validate()) return;
+    const clientErrors = validateClientSide();
+    if (!policyVersion) {
+      clientErrors.consent = 'Kebijakan privasi belum berhasil dimuat, coba muat ulang halaman.';
+    }
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors);
+      return;
+    }
+    setFieldErrors({});
+    setIsSubmitting(true);
+
+    const payload: ParentRegistrationRequest = {
+      fullName: fullName.trim(),
+      email: email.trim(),
+      ...(phone.trim() ? { phone: phone.trim() } : {}),
+      password,
+      studentNisn,
+      consent: { policyVersion: policyVersion as string, accepted: true },
+    };
 
     try {
-      setIsSubmitting(true);
-      // TODO: ganti dengan pemanggilan endpoint pendaftaran sesungguhnya
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      navigate("/signin");
-    } catch (error) {
-      setFormError(
-        error instanceof Error
-          ? error.message
-          : "Gagal mendaftar. Silakan coba lagi.",
-      );
+      const { data } = await apiClient.post<ParentRegistrationResponse>('/auth/parent-registrations', payload);
+      navigate('/verify-code', { state: { email: data.email, purpose: 'email_verification' } });
+    } catch (err) {
+      const code = getApiErrorCode(err);
+      if (code === 'VALIDATION_ERROR') {
+        const details = getApiErrorDetails(err);
+        const mapped: FieldErrors = {};
+        for (const d of details) {
+          (mapped as Record<string, string>)[d.field ?? 'form'] = d.message;
+        }
+        setFieldErrors(mapped);
+        setFormError('Periksa kembali data yang kamu isi.');
+      } else if (code === 'EMAIL_ALREADY_REGISTERED') {
+        setFieldErrors({ email: 'Email ini sudah terdaftar. Coba masuk atau gunakan email lain.' });
+      } else if (code === 'NISN_NOT_FOUND') {
+        setFieldErrors({ studentNisn: 'NISN tidak ditemukan/tidak valid. Pastikan penulisannya benar.' });
+      } else {
+        setFormError(getApiErrorMessage(err, 'Registrasi gagal. Coba lagi.'));
+      }
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
   return (
-    <div className="w-full max-w-[440px] py-10">
-      <div className="mb-8 flex flex-col items-center text-center">
-        <img
-          src="/images/logo/Oasys_School_Logo_1.webp"
-          alt="Oasys School"
-          className="mb-6 h-24 w-auto"
-        />
-        <h1 className="mb-1.5 text-title-sm font-semibold text-gray-800 dark:text-white/90">
-          Buat akun baru
-        </h1>
-        <p className="text-theme-sm text-gray-500 dark:text-gray-400">
-          Pendaftaran akun untuk guru dan staf Oasys School
-        </p>
+    <div className="font-jakarta">
+      <h1 className="text-[22px] font-semibold text-gray-900">Daftar sebagai orang tua</h1>
+      <p className="mt-1.5 text-[14px] text-gray-500">Pantau presensi dan info akademik anak Anda.</p>
+
+      <div className="mt-5 rounded-md border border-brand-100 bg-brand-25 px-3.5 py-3 text-[13px] leading-relaxed text-brand-700">
+        Setelah email terverifikasi, akun ini hanya dapat digunakan di{' '}
+        <span className="font-medium">Aplikasi Mobile Oasys School</span> — pendaftaran boleh lewat sini, tapi
+        pemakaian sehari-hari lewat aplikasi.
       </div>
 
-      {formError && (
-        <div
-          role="alert"
-          className="mb-5 rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-theme-sm text-error-700 dark:border-error-800 dark:bg-error-500/10 dark:text-error-400"
+      <form onSubmit={handleSubmit} className="mt-6 space-y-5" noValidate>
+        {formError && (
+          <div role="alert" className="rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] leading-relaxed text-error-700">
+            {formError}
+          </div>
+        )}
+
+        <Field label="Nama lengkap" htmlFor="fullName" error={fieldErrors.fullName}>
+          <input
+            id="fullName"
+            type="text"
+            autoComplete="name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Siti Aminah"
+            className={inputClass(!!fieldErrors.fullName)}
+          />
+        </Field>
+
+        <Field label="Email" htmlFor="email" error={fieldErrors.email}>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="siti.aminah@email.com"
+            className={inputClass(!!fieldErrors.email)}
+          />
+        </Field>
+
+        <Field label="Nomor telepon (opsional)" htmlFor="phone" error={fieldErrors.phone}>
+          <input
+            id="phone"
+            type="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="08123456789"
+            className={inputClass(!!fieldErrors.phone)}
+          />
+        </Field>
+
+        <Field label="Kata sandi" htmlFor="password" error={fieldErrors.password} helper="Minimal 8 karakter.">
+          <input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Buat kata sandi"
+            className={inputClass(!!fieldErrors.password)}
+          />
+        </Field>
+
+        <Field
+          label="NISN anak"
+          htmlFor="studentNisn"
+          error={fieldErrors.studentNisn}
+          helper="10 digit, sesuai kartu NISN/rapor anak Anda."
         >
-          {formError}
-        </div>
-      )}
+          <input
+            id="studentNisn"
+            type="text"
+            inputMode="numeric"
+            maxLength={10}
+            value={studentNisn}
+            onChange={(e) => setStudentNisn(e.target.value.replace(/\D/g, ''))}
+            placeholder="0012345678"
+            className={inputClass(!!fieldErrors.studentNisn)}
+          />
+        </Field>
 
-      <form onSubmit={handleSubmit} noValidate>
-        <div className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="firstName">
-                Nama Depan <span className="text-error-500">*</span>
-              </Label>
-              <div className="relative">
-                <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-gray-400">
-                  <UserIcon className="size-5" />
-                </span>
-                <Input
-                  id="firstName"
-                  name="firstName"
-                  placeholder="Contoh: Siti"
-                  value={values.firstName}
-                  error={Boolean(errors.firstName)}
-                  hint={errors.firstName}
-                  className="pl-11"
-                  onChange={(e) =>
-                    setValues((prev) => ({
-                      ...prev,
-                      firstName: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="lastName">
-                Nama Belakang <span className="text-error-500">*</span>
-              </Label>
-              <Input
-                id="lastName"
-                name="lastName"
-                placeholder="Contoh: Rahayu"
-                value={values.lastName}
-                error={Boolean(errors.lastName)}
-                hint={errors.lastName}
-                onChange={(e) =>
-                  setValues((prev) => ({
-                    ...prev,
-                    lastName: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="email">
-              Email <span className="text-error-500">*</span>
-            </Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-gray-400">
-                <EnvelopeIcon className="size-5" />
-              </span>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="nama@oasysschool.sch.id"
-                value={values.email}
-                error={Boolean(errors.email)}
-                hint={errors.email}
-                className="pl-11"
-                onChange={(e) =>
-                  setValues((prev) => ({ ...prev, email: e.target.value }))
-                }
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="password">
-              Kata Sandi <span className="text-error-500">*</span>
-            </Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-gray-400">
-                <LockIcon className="size-5" />
-              </span>
-              <Input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Minimal 8 karakter"
-                value={values.password}
-                error={Boolean(errors.password)}
-                hint={errors.password}
-                className="pr-11 pl-11"
-                onChange={(e) =>
-                  setValues((prev) => ({
-                    ...prev,
-                    password: e.target.value,
-                  }))
-                }
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={
-                  showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"
-                }
-                className="absolute top-1/2 right-3.5 z-10 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                {showPassword ? (
-                  <EyeIcon className="size-5" />
-                ) : (
-                  <EyeCloseIcon className="size-5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="confirmPassword">
-              Konfirmasi Kata Sandi <span className="text-error-500">*</span>
-            </Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-gray-400">
-                <LockIcon className="size-5" />
-              </span>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Ulangi kata sandi"
-                value={values.confirmPassword}
-                error={Boolean(errors.confirmPassword)}
-                hint={errors.confirmPassword}
-                className="pr-11 pl-11"
-                onChange={(e) =>
-                  setValues((prev) => ({
-                    ...prev,
-                    confirmPassword: e.target.value,
-                  }))
-                }
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword((prev) => !prev)}
-                aria-label={
-                  showConfirmPassword
-                    ? "Sembunyikan kata sandi"
-                    : "Tampilkan kata sandi"
-                }
-                className="absolute top-1/2 right-3.5 z-10 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                {showConfirmPassword ? (
-                  <EyeIcon className="size-5" />
-                ) : (
-                  <EyeCloseIcon className="size-5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <Checkbox
-              id="agree"
-              label="Saya menyetujui Syarat & Ketentuan serta Kebijakan Privasi Oasys School"
-              checked={values.agree}
-              onChange={(checked) =>
-                setValues((prev) => ({ ...prev, agree: checked }))
-              }
+        <div>
+          <label className="flex items-start gap-2.5 text-[13.5px] text-gray-700">
+            <input
+              type="checkbox"
+              checked={consentAccepted}
+              onChange={(e) => setConsentAccepted(e.target.checked)}
+              disabled={!policyVersion}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500/30"
             />
-            {errors.agree && (
-              <p className="mt-1.5 text-xs text-error-500">{errors.agree}</p>
-            )}
-          </div>
-
-          <div>
-            <Button
-              className="w-full justify-center"
-              size="sm"
-              disabled={isSubmitting}
-              endIcon={!isSubmitting && <ArrowRightIcon className="size-4" />}
-            >
-              {isSubmitting ? "Memproses..." : "Daftar"}
-            </Button>
-          </div>
+            <span>
+              Saya menyetujui{' '}
+              <Link to="/privacy-policy" target="_blank" className="font-medium text-brand-500 hover:underline">
+                Kebijakan Privasi{policyVersion ? ` (v${policyVersion})` : ''}
+              </Link>{' '}
+              dan pemrosesan data anak saya untuk keperluan presensi sekolah.
+            </span>
+          </label>
+          {policyLoadError && (
+            <p className="mt-1.5 text-[12.5px] text-error-600">
+              Gagal memuat kebijakan privasi. Muat ulang halaman untuk mencoba lagi.
+            </p>
+          )}
+          {fieldErrors.consent && <p className="mt-1.5 text-[12.5px] text-error-600">{fieldErrors.consent}</p>}
         </div>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex h-11 w-full items-center justify-center rounded-md bg-brand-500 text-[14px] font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
+        >
+          {isSubmitting ? 'Memproses...' : 'Daftar'}
+        </button>
       </form>
 
-      <p className="mt-6 text-center text-theme-sm text-gray-500 dark:text-gray-400">
-        Sudah punya akun?{" "}
-        <Link
-          to="/signin"
-          className="font-medium text-brand-500 hover:text-brand-600"
-        >
-          Masuk di sini
+      <p className="mt-6 text-[13px] text-gray-500">
+        Sudah punya akun?{' '}
+        <Link to="/signin" className="font-medium text-brand-500 hover:underline">
+          Masuk
         </Link>
       </p>
+    </div>
+  );
+}
+
+function inputClass(hasError: boolean): string {
+  const base =
+    'h-11 w-full rounded-md border bg-white px-3.5 text-[14px] text-gray-900 outline-none transition-shadow focus:ring-2';
+  return hasError
+    ? `${base} border-error-300 focus:border-error-500 focus:ring-error-500/20`
+    : `${base} border-gray-300 focus:border-brand-500 focus:ring-brand-500/20`;
+}
+
+function Field({
+  label,
+  htmlFor,
+  error,
+  helper,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  error?: string;
+  helper?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label htmlFor={htmlFor} className="mb-1.5 block text-[13.5px] font-medium text-gray-900">
+        {label}
+      </label>
+      {children}
+      {error ? (
+        <p className="mt-1.5 text-[12.5px] text-error-600">{error}</p>
+      ) : helper ? (
+        <p className="mt-1.5 text-[12.5px] text-gray-500">{helper}</p>
+      ) : null}
     </div>
   );
 }
