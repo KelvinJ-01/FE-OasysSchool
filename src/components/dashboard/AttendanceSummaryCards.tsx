@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CircleCheck, Thermometer, FileText, CircleX, Clock } from 'lucide-react';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
+import { Skeleton } from '../common/Skeleton';
 import type { DashboardSummaryResponse } from '../../types/auth';
 
 interface StatDef {
@@ -43,7 +44,7 @@ export function AttendanceSummaryCards() {
     return (
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {STATS.map((s) => (
-          <div key={s.key} className="h-[104px] animate-pulse rounded-xl border border-gray-200 bg-gray-50" />
+          <Skeleton key={s.key} className="h-[104px] rounded-xl" />
         ))}
       </div>
     );

@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { Mail, ArrowRight } from 'lucide-react';
 import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
 import { useToast } from '../../hooks/useToast';
+import { Spinner } from '../common/Spinner';
 import type { PasswordResetRequest, MessageResponse } from '../../types/auth';
 
 export default function ResetPasswordForm() {
@@ -78,7 +79,12 @@ export default function ResetPasswordForm() {
           disabled={isSubmitting}
           className="flex h-11 w-full items-center justify-center gap-2 rounded-md bg-brand-500 text-[14px] font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
         >
-          {isSubmitting ? 'Mengirim...' : (
+          {isSubmitting ? (
+            <>
+              <Spinner size="sm" />
+              Mengirim...
+            </>
+          ) : (
             <>
               Kirim Kode Verifikasi
               <ArrowRight size={16} aria-hidden="true" />

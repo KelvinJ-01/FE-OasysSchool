@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ClipboardEvent } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { ArrowRight, CircleCheck } from 'lucide-react';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
 import { useToast } from '../../hooks/useToast';
+import { Spinner } from '../common/Spinner';
 import type {
   PasswordResetRequest,
   PasswordResetVerifyOtpRequest,
@@ -200,7 +201,12 @@ export default function VerifyCodeForm() {
           disabled={isSubmitting}
           className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-brand-500 text-[14px] font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
         >
-          {isSubmitting ? 'Memverifikasi...' : (
+          {isSubmitting ? (
+            <>
+              <Spinner size="sm" />
+              Memverifikasi...
+            </>
+          ) : (
             <>
               Verifikasi Kode
               <ArrowRight size={16} aria-hidden="true" />

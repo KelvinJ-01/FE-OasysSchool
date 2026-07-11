@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Skeleton } from './Skeleton';
 
 export interface Column<T> {
   key: string;
@@ -48,7 +49,7 @@ export function DataTable<T>({
                 <tr key={i}>
                   {columns.map((col) => (
                     <td key={col.key} className="px-5 py-4">
-                      <div className="h-4 w-24 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
+                      <Skeleton className="h-4 w-24" />
                     </td>
                   ))}
                 </tr>

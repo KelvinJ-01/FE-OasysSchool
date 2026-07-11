@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { History, CircleCheck, Thermometer, FileText, CircleX } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { Spinner } from '../../components/common/Spinner';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
 import { DataTable, type Column } from '../../components/common/DataTable';
+import { Skeleton } from '../../components/common/Skeleton';
 import { Modal } from '../../components/ui/modal';
 import { useModal } from '../../hooks/useModal';
 import PageMeta from '../../components/common/PageMeta';
@@ -298,7 +300,14 @@ function CorrectStatusModal({
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="h-10 rounded-md px-4 text-theme-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5">Batal</button>
             <button type="submit" disabled={isSubmitting} className="h-10 rounded-md bg-brand-500 px-5 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60">
-              {isSubmitting ? 'Menyimpan...' : 'Simpan'}
+              {isSubmitting ? (
+                <>
+                  <Spinner size="sm" className="mr-2" />
+                  Menyimpan...
+                </>
+              ) : (
+                'Simpan'
+              )}
             </button>
           </div>
         </form>
@@ -341,7 +350,7 @@ function HistoryModal({
         <h3 className="mb-1 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Riwayat Perubahan Status</h3>
         <p className="mb-5 text-[13px] text-gray-500 dark:text-gray-400">{studentName}</p>
 
-        {isLoading && <div className="h-20 animate-pulse rounded-md bg-gray-50 dark:bg-white/[0.03]" />}
+        {isLoading && <Skeleton className="h-20 rounded-md" />}
         {error && <p className="text-[13.5px] text-error-600">{error}</p>}
 
         {!isLoading && !error && history.length === 0 && (

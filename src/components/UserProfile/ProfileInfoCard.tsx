@@ -3,6 +3,8 @@ import { CircleCheck, Clock, CircleX, Camera, Trash2 } from 'lucide-react';
 import { apiClient, getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '../../lib/apiClient';
 import { useToast } from '../../hooks/useToast';
 import { Avatar } from '../common/Avatar';
+import { Skeleton } from '../common/Skeleton';
+import { Spinner } from '../common/Spinner';
 import type { UserProfileResponse, UpdateProfileRequest, UploadPhotoResponse } from '../../types/profile';
 import type { AccountStatus, UserRole } from '../../types/entities';
 
@@ -53,7 +55,7 @@ export function ProfileInfoCard() {
 
   async function handlePhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    e.target.value = '';
+    e.target.value = ''; // supaya bisa pilih file yang sama lagi kalau perlu
     if (!file || !profile) return;
 
     if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
@@ -137,7 +139,7 @@ export function ProfileInfoCard() {
   }
 
   if (isLoading) {
-    return <div className="h-64 animate-pulse rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03]" />;
+    return <Skeleton className="h-64 rounded-xl" />;
   }
 
   if (!profile) {
@@ -252,7 +254,14 @@ export function ProfileInfoCard() {
             disabled={!isDirty || isSaving}
             className="flex h-10 items-center justify-center rounded-md bg-brand-500 px-5 text-[14px] font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-50"
           >
-            {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+            {isSaving ? (
+              <>
+                <Spinner size="sm" className="mr-2" />
+                Menyimpan...
+              </>
+            ) : (
+              'Simpan Perubahan'
+            )}
           </button>
         </div>
       </form>

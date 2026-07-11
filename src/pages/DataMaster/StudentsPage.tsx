@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
+import { Spinner } from '../../components/common/Spinner';
 import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { Modal } from '../../components/ui/modal';
@@ -218,8 +219,6 @@ export default function StudentsPage() {
   );
 }
 
-// --- Modal Tambah/Ubah Siswa -------------------------------------------------
-
 function StudentFormModal({
   isOpen,
   onClose,
@@ -330,7 +329,14 @@ function StudentFormModal({
               disabled={isSubmitting}
               className="h-10 rounded-md bg-brand-500 px-5 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
             >
-              {isSubmitting ? 'Menyimpan...' : 'Simpan'}
+              {isSubmitting ? (
+                <>
+                  <Spinner size="sm" className="mr-2" />
+                  Menyimpan...
+                </>
+              ) : (
+                'Simpan'
+              )}
             </button>
           </div>
         </form>
@@ -338,8 +344,6 @@ function StudentFormModal({
     </Modal>
   );
 }
-
-// --- Modal Ubah Status Siswa -------------------------------------------------
 
 function StudentStatusModal({
   isOpen,
@@ -419,7 +423,14 @@ function StudentStatusModal({
               disabled={isSubmitting}
               className="h-10 rounded-md bg-error-600 px-5 text-theme-sm font-medium text-white transition-colors hover:bg-error-700 disabled:opacity-60"
             >
-              {isSubmitting ? 'Menyimpan...' : 'Ubah Status'}
+              {isSubmitting ? (
+                <>
+                  <Spinner size="sm" className="mr-2" />
+                  Menyimpan...
+                </>
+              ) : (
+                'Ubah Status'
+              )}
             </button>
           </div>
         </form>

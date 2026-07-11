@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { Eye, EyeOff } from 'lucide-react';
+import { Spinner } from '../common/Spinner';
 
 export function SignInForm() {
   const { login } = useAuth();
@@ -15,8 +16,12 @@ export function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Pesan sukses dari navigasi (mis. habis verifikasi email) — ditampilkan
+  // sekali di awal, jadi cukup lewat toast saat mount, bukan banner statis
+  // yang tetap nongkrong di layar walau sudah tidak relevan.
   useEffect(() => {
     if (successMessage) toast.success(successMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSubmit(e: FormEvent) {
@@ -89,7 +94,14 @@ export function SignInForm() {
           disabled={isSubmitting}
           className="flex h-11 w-full items-center justify-center rounded-md bg-brand-500 text-[14px] font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
         >
-          {isSubmitting ? 'Memproses...' : 'Masuk'}
+          {isSubmitting ? (
+            <>
+              <Spinner size="sm" className="mr-2" />
+              Memproses...
+            </>
+          ) : (
+            'Masuk'
+          )}
         </button>
       </form>
 

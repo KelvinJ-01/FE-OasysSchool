@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router';
 import { useAuth } from '../../hooks/useAuth';
 import PageMeta from '../../components/common/PageMeta';
 import PageBreadCrumb from '../../components/common/PageBreadCrumb';

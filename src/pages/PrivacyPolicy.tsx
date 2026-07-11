@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import PageMeta from '../components/common/PageMeta';
 import { apiClient, getApiErrorMessage } from '../lib/apiClient';
+import { Skeleton } from '../components/common/Skeleton';
 import type { PrivacyPolicyResponse } from '../types/auth';
 
 export default function PrivacyPolicy() {
@@ -29,7 +30,14 @@ export default function PrivacyPolicy() {
 
           <h1 className="font-display mt-6 text-[30px] text-gray-900 sm:text-[34px]">Kebijakan Privasi</h1>
 
-          {isLoading && <p className="mt-6 text-[14px] text-gray-500">Memuat kebijakan privasi...</p>}
+          {isLoading && (
+            <div className="mt-6 space-y-2.5">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+          )}
 
           {errorMessage && !isLoading && (
             <div role="alert" className="mt-6 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">

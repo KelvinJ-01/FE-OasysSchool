@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { ArrowLeft, Heart } from 'lucide-react';
 import PageMeta from '../components/common/PageMeta';
 import { CopyField } from '../components/common/CopyField';

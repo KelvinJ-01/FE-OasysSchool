@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { Lock, Eye, EyeOff, CircleCheck } from 'lucide-react';
 import { Modal } from '../ui/modal';
 import { useModal } from '../../hooks/useModal';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
 import { useToast } from '../../hooks/useToast';
+import { Spinner } from '../common/Spinner';
 import type { PasswordResetConfirmRequest, MessageResponse } from '../../types/auth';
 
 interface FormValues {
@@ -164,7 +165,14 @@ export default function NewPasswordForm() {
           disabled={isSubmitting}
           className="flex h-11 w-full items-center justify-center rounded-md bg-brand-500 text-[14px] font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
         >
-          {isSubmitting ? 'Menyimpan...' : 'Simpan Kata Sandi'}
+          {isSubmitting ? (
+            <>
+              <Spinner size="sm" className="mr-2" />
+              Menyimpan...
+            </>
+          ) : (
+            'Simpan Kata Sandi'
+          )}
         </button>
       </form>
 

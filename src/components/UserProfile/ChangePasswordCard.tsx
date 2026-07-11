@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
 import { useToast } from '../../hooks/useToast';
+import { Spinner } from '../common/Spinner';
 import type { ChangePasswordRequest } from '../../types/profile';
 import type { MessageResponse } from '../../types/auth';
 
@@ -117,7 +118,14 @@ export function ChangePasswordCard() {
             disabled={isSubmitting}
             className="flex h-10 items-center justify-center rounded-md bg-brand-500 px-5 text-[14px] font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
           >
-            {isSubmitting ? 'Menyimpan...' : 'Ubah Kata Sandi'}
+            {isSubmitting ? (
+              <>
+                <Spinner size="sm" className="mr-2" />
+                Menyimpan...
+              </>
+            ) : (
+              'Ubah Kata Sandi'
+            )}
           </button>
         </div>
       </form>

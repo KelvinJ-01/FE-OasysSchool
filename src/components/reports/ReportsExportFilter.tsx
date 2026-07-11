@@ -1,26 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
 import { useAuth } from '../../hooks/useAuth';
-
-// TODO: pindahkan ke types/entities.ts saat file itu dibuat.
-interface ClassOption {
-  id: string;
-  name: string;
-}
-
-interface AcademicTermOption {
-  id: string;
-  label: string;
-}
+import { Spinner } from '../common/Spinner';
+import type { PaginatedResponse } from '../../types/api';
+import type { ClassEntity, AcademicTerm } from '../../types/entities';
 
 type ExportFormat = 'csv' | 'xlsx';
+
+const SEMESTER_LABEL: Record<AcademicTerm['semester'], string> = { ganjil: 'Ganjil', genap: 'Genap' };
+
+function termLabel(t: AcademicTerm): string {
+  return `${t.yearLabel} · ${SEMESTER_LABEL[t.semester]}${t.isActive ? ' (Aktif)' : ''}`;
+}
 
 export function ReportsExportFilter() {
   const { user } = useAuth();
   const isTeacher = user?.role === 'teacher';
 
-  const [classes, setClasses] = useState<ClassOption[]>([]);
-  const [terms, setTerms] = useState<AcademicTermOption[]>([]);
+  const [classes, setClasses] = useState<ClassEntity[]>([]);
+  const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [classId, setClassId] = useState<string>('');
   const [academicTermId, setAcademicTermId] = useState<string>('');
   const [format, setFormat] = useState<ExportFormat>('xlsx');
@@ -28,11 +26,11 @@ export function ReportsExportFilter() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    apiClient.get<{ items: ClassOption[] }>('/classes', { params: { pageSize: 100 } })
+    apiClient.get<PaginatedResponse<ClassEntity>>('/classes', { params: { pageSize: 100 } })
       .then((res) => setClasses(res.data.items))
       .catch(() => setClasses([]));
 
-    apiClient.get<{ items: AcademicTermOption[] }>('/academic-terms', { params: { pageSize: 100 } })
+    apiClient.get<PaginatedResponse<AcademicTerm>>('/academic-terms', { params: { pageSize: 100 } })
       .then((res) => setTerms(res.data.items))
       .catch(() => setTerms([]));
   }, []);
@@ -83,32 +81,39 @@ export function ReportsExportFilter() {
     }
   }
 
+  const selectClass = 'h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 text-[14px] text-gray-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90';
+
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1" htmlFor="academicTermId">
-          Semester &amp; Tahun Ajaran <span className="text-red-600">*</span>
+        <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90" htmlFor="academicTermId">
+          Semester &amp; Tahun Ajaran <span className="text-error-500">*</span>
         </label>
         <select
           id="academicTermId"
-          className="w-full rounded border px-3 py-2"
+          className={selectClass}
           value={academicTermId}
           onChange={(e) => setAcademicTermId(e.target.value)}
         >
           <option value="">Pilih semester...</option>
           {terms.map((t) => (
-            <option key={t.id} value={t.id}>{t.label}</option>
+            <option key={t.id} value={t.id}>{termLabel(t)}</option>
           ))}
         </select>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1" htmlFor="classId">
-          Kelas {isClassRequired ? <span className="text-red-600">*</span> : <span className="text-gray-400">(opsional — kosongkan untuk seluruh sekolah)</span>}
+        <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90" htmlFor="classId">
+          Kelas{' '}
+          {isClassRequired ? (
+            <span className="text-error-500">*</span>
+          ) : (
+            <span className="text-theme-xs font-normal text-gray-400">(opsional — kosongkan untuk seluruh sekolah)</span>
+          )}
         </label>
         <select
           id="classId"
-          className="w-full rounded border px-3 py-2"
+          className={selectClass}
           value={classId}
           onChange={(e) => setClassId(e.target.value)}
         >
@@ -120,30 +125,37 @@ export function ReportsExportFilter() {
       </div>
 
       <div>
-        <span className="block text-sm font-medium mb-1">Format</span>
+        <span className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Format</span>
         <div className="flex gap-4">
-          <label className="flex items-center gap-2">
-            <input type="radio" checked={format === 'xlsx'} onChange={() => setFormat('xlsx')} />
+          <label className="flex items-center gap-2 text-[14px] text-gray-700 dark:text-gray-300">
+            <input type="radio" checked={format === 'xlsx'} onChange={() => setFormat('xlsx')} className="text-brand-500 focus:ring-brand-500/30" />
             Excel (.xlsx)
           </label>
-          <label className="flex items-center gap-2">
-            <input type="radio" checked={format === 'csv'} onChange={() => setFormat('csv')} />
+          <label className="flex items-center gap-2 text-[14px] text-gray-700 dark:text-gray-300">
+            <input type="radio" checked={format === 'csv'} onChange={() => setFormat('csv')} className="text-brand-500 focus:ring-brand-500/30" />
             CSV (.csv)
           </label>
         </div>
       </div>
 
       {errorMessage && (
-        <p className="text-sm text-red-600" role="alert">{errorMessage}</p>
+        <p className="text-[13.5px] text-error-600" role="alert">{errorMessage}</p>
       )}
 
       <button
         type="button"
-        className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
+        className="flex h-11 items-center justify-center rounded-md bg-brand-500 px-5 text-[14px] font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-50"
         disabled={!canSubmit || isSubmitting}
         onClick={handleExport}
       >
-        {isSubmitting ? 'Mengekspor...' : 'Ekspor Laporan'}
+        {isSubmitting ? (
+          <>
+            <Spinner size="sm" className="mr-2" />
+            Mengekspor...
+          </>
+        ) : (
+          'Ekspor Laporan'
+        )}
       </button>
     </div>
   );

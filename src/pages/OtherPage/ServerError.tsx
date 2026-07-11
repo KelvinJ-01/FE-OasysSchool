@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { ServerCrash } from 'lucide-react';
 import PageMeta from '../../components/common/PageMeta';
 

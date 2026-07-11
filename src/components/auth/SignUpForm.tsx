@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { apiClient, getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '../../lib/apiClient';
 import { useToast } from '../../hooks/useToast';
+import { Spinner } from '../common/Spinner';
 import type { ParentRegistrationRequest, ParentRegistrationResponse, PrivacyPolicyResponse } from '../../types/auth';
 
 interface FieldErrors {
@@ -200,7 +201,14 @@ export function SignUpForm() {
           disabled={isSubmitting}
           className="flex h-11 w-full items-center justify-center rounded-md bg-brand-500 text-[14px] font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
         >
-          {isSubmitting ? 'Memproses...' : 'Daftar'}
+          {isSubmitting ? (
+            <>
+              <Spinner size="sm" className="mr-2" />
+              Memproses...
+            </>
+          ) : (
+            'Daftar'
+          )}
         </button>
       </form>
 

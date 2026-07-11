@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Plus, Pencil } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
+import { Spinner } from '../../components/common/Spinner';
 import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { Modal } from '../../components/ui/modal';
@@ -231,7 +232,14 @@ function AcademicTermFormModal({
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="h-10 rounded-md px-4 text-theme-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5">Batal</button>
             <button type="submit" disabled={isSubmitting} className="h-10 rounded-md bg-brand-500 px-5 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60">
-              {isSubmitting ? 'Menyimpan...' : 'Simpan'}
+              {isSubmitting ? (
+                <>
+                  <Spinner size="sm" className="mr-2" />
+                  Menyimpan...
+                </>
+              ) : (
+                'Simpan'
+              )}
             </button>
           </div>
         </form>

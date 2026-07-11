@@ -3,6 +3,7 @@ import { HandCoins, Server, Sparkles, ShieldCheck, LifeBuoy, GraduationCap, Info
 import PageMeta from '../../components/common/PageMeta';
 import PageBreadCrumb from '../../components/common/PageBreadCrumb';
 import { CopyField } from '../../components/common/CopyField';
+import { Skeleton } from '../../components/common/Skeleton';
 import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
 import type { DonationsResponse } from '../../types/donation';
 
@@ -95,7 +96,7 @@ export default function DonationsPage() {
         <h2 className="text-[19px] font-semibold text-gray-900 dark:text-white/90">Progress Pengembangan Saat Ini</h2>
 
         {isLoadingProgress && (
-          <div className="mx-auto mt-4 h-9 w-48 animate-pulse rounded-md bg-gray-100 dark:bg-gray-800" />
+          <Skeleton className="mx-auto mt-4 h-9 w-48 rounded-md" />
         )}
 
         {!isLoadingProgress && progressError && (
