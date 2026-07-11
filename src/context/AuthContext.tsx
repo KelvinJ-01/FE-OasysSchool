@@ -1,5 +1,6 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import { useToast } from '../hooks/useToast';
 import {
   apiClient,
   clearStoredToken,
@@ -35,6 +36,7 @@ function decodeUserFromToken(token: string): AuthUser | null {
       role: payload.role,
       schoolId: payload.schoolId,
       fullName: payload.fullName,
+      photoUrl: payload.photoUrl,
     };
   } catch {
     return null;
@@ -44,11 +46,18 @@ function decodeUserFromToken(token: string): AuthUser | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
   const clearLocalSession = useCallback(() => {
     clearStoredToken();
     clearStoredRefreshToken();
     setUser(null);
   }, []);
+
+  const handleForcedLogout = useCallback(() => {
+    clearLocalSession();
+    toast.error('Sesi Anda berakhir. Silakan masuk kembali.');
+  }, [clearLocalSession, toast]);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -64,8 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    registerUnauthorizedHandler(clearLocalSession);
-  }, [clearLocalSession]);
+    registerUnauthorizedHandler(handleForcedLogout);
+  }, [handleForcedLogout]);
 
   const login = useCallback(async (email: string, password: string) => {
     const payload: LoginRequest = { email, password, platform: 'web' };

@@ -1,24 +1,31 @@
-import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../hooks/useToast';
 import { Eye, EyeOff } from 'lucide-react';
 
 export function SignInForm() {
   const { login } = useAuth();
+  const { toast } = useToast();
+  const location = useLocation();
+  const successMessage = (location.state as { message?: string } | null)?.message;
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (successMessage) toast.success(successMessage);
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setErrorMessage(null);
     setIsSubmitting(true);
     try {
       await login(email, password);
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Gagal masuk. Coba lagi.');
+      toast.error(err instanceof Error ? err.message : 'Gagal masuk. Coba lagi.');
     } finally {
       setIsSubmitting(false);
     }
@@ -30,15 +37,6 @@ export function SignInForm() {
       <p className="mt-1.5 text-[14px] text-gray-500">Untuk Guru dan Administrator sekolah.</p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
-        {errorMessage && (
-          <div
-            role="alert"
-            className="rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] leading-relaxed text-error-700"
-          >
-            {errorMessage}
-          </div>
-        )}
-
         <div>
           <label htmlFor="email" className="mb-1.5 block text-[13.5px] font-medium text-gray-900">
             Email

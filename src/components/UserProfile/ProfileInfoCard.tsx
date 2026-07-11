@@ -1,8 +1,13 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { CircleCheck, Clock, CircleX } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { CircleCheck, Clock, CircleX, Camera, Trash2 } from 'lucide-react';
 import { apiClient, getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '../../lib/apiClient';
-import type { UserProfileResponse, UpdateProfileRequest } from '../../types/profile';
+import { useToast } from '../../hooks/useToast';
+import { Avatar } from '../common/Avatar';
+import type { UserProfileResponse, UpdateProfileRequest, UploadPhotoResponse } from '../../types/profile';
 import type { AccountStatus, UserRole } from '../../types/entities';
+
+const MAX_PHOTO_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB, sesuai API Spec §3.11
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const ROLE_LABEL: Record<UserRole, string> = {
   developer: 'Tim Pengembang',
@@ -23,14 +28,16 @@ interface FieldErrors {
 }
 
 export function ProfileInfoCard() {
+  const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     apiClient
@@ -40,16 +47,65 @@ export function ProfileInfoCard() {
         setFullName(res.data.fullName);
         setPhone(res.data.phone ?? '');
       })
-      .catch((err) => setFormError(getApiErrorMessage(err, 'Gagal memuat profil.')))
+      .catch((err) => setLoadError(getApiErrorMessage(err, 'Gagal memuat profil.')))
       .finally(() => setIsLoading(false));
   }, []);
+
+  async function handlePhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !profile) return;
+
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+      toast.error('Format foto harus JPEG, PNG, atau WebP.');
+      return;
+    }
+    if (file.size > MAX_PHOTO_SIZE_BYTES) {
+      toast.error('Ukuran foto maksimum 2 MB.');
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('photo', file);
+      const { data } = await apiClient.post<UploadPhotoResponse>('/users/me/photo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setProfile((prev) => (prev ? { ...prev, photoUrl: data.photoUrl } : prev));
+      toast.success('Foto profil berhasil diperbarui.');
+    } catch (err) {
+      const code = getApiErrorCode(err);
+      if (code === 'INVALID_FILE_TYPE') {
+        toast.error('Format foto tidak didukung.');
+      } else if (code === 'FILE_TOO_LARGE') {
+        toast.error('Ukuran foto melebihi batas 2 MB.');
+      } else {
+        toast.error(getApiErrorMessage(err, 'Gagal mengunggah foto.'));
+      }
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  }
+
+  async function handleRemovePhoto() {
+    if (!profile?.photoUrl) return;
+    setIsUploadingPhoto(true);
+    try {
+      await apiClient.delete('/users/me/photo');
+      setProfile((prev) => (prev ? { ...prev, photoUrl: null } : prev));
+      toast.success('Foto profil dihapus.');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Gagal menghapus foto.'));
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  }
 
   const isDirty = profile ? fullName.trim() !== profile.fullName || phone.trim() !== (profile.phone ?? '') : false;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setFormError(null);
-    setSuccessMessage(null);
 
     if (fullName.trim().length < 3) {
       setFieldErrors({ fullName: 'Nama lengkap minimal 3 karakter.' });
@@ -62,7 +118,7 @@ export function ProfileInfoCard() {
       const payload: UpdateProfileRequest = { fullName: fullName.trim(), phone: phone.trim() || null };
       const { data } = await apiClient.patch<UserProfileResponse>('/users/me', payload);
       setProfile(data);
-      setSuccessMessage('Profil berhasil disimpan.');
+      toast.success('Profil berhasil disimpan.');
     } catch (err) {
       const code = getApiErrorCode(err);
       if (code === 'VALIDATION_ERROR') {
@@ -73,7 +129,7 @@ export function ProfileInfoCard() {
         }
         setFieldErrors(mapped);
       } else {
-        setFormError(getApiErrorMessage(err, 'Gagal menyimpan profil.'));
+        toast.error(getApiErrorMessage(err, 'Gagal menyimpan profil.'));
       }
     } finally {
       setIsSaving(false);
@@ -87,7 +143,7 @@ export function ProfileInfoCard() {
   if (!profile) {
     return (
       <div role="alert" className="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700">
-        {formError ?? 'Profil tidak tersedia.'}
+        {loadError ?? 'Profil tidak tersedia.'}
       </div>
     );
   }
@@ -104,16 +160,44 @@ export function ProfileInfoCard() {
         </span>
       </div>
 
-      {formError && (
-        <div role="alert" className="mb-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">
-          {formError}
+      <div className="mb-6 flex items-center gap-4">
+        <div className="relative">
+          <Avatar fullName={profile.fullName} photoUrl={profile.photoUrl} size="lg" />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingPhoto}
+            aria-label="Ubah foto profil"
+            className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full border-2 border-white bg-brand-500 text-white transition-colors hover:bg-brand-600 disabled:opacity-60 dark:border-gray-900"
+          >
+            <Camera size={13} aria-hidden="true" />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handlePhotoSelected}
+            className="hidden"
+          />
         </div>
-      )}
-      {successMessage && (
-        <div role="status" className="mb-4 rounded-md border border-secondary-200 bg-secondary-50 px-3.5 py-3 text-[13.5px] text-secondary-700">
-          {successMessage}
+        <div>
+          <p className="text-[13.5px] font-medium text-gray-900 dark:text-white/90">
+            {isUploadingPhoto ? 'Memproses...' : 'Foto Profil'}
+          </p>
+          <p className="text-theme-xs text-gray-400">JPEG/PNG/WebP, maks. 2 MB.</p>
+          {profile.photoUrl && (
+            <button
+              type="button"
+              onClick={handleRemovePhoto}
+              disabled={isUploadingPhoto}
+              className="mt-1 flex items-center gap-1 text-theme-xs font-medium text-error-600 hover:underline disabled:opacity-60"
+            >
+              <Trash2 size={12} aria-hidden="true" />
+              Hapus foto
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         <div className="grid gap-5 sm:grid-cols-2">

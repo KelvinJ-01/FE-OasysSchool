@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../hooks/useToast';
 import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { Modal } from '../../components/ui/modal';
@@ -13,6 +14,7 @@ const PAGE_SIZE = 10;
 
 export default function SubjectsPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const isAdmin = user?.role === 'administrator';
 
   const [items, setItems] = useState<Subject[]>([]);
@@ -45,6 +47,7 @@ export default function SubjectsPage() {
     if (!window.confirm(`Hapus mata pelajaran "${subject.name}"?`)) return;
     try {
       await apiClient.delete(`/subjects/${subject.id}`);
+      toast.success(`Mata pelajaran "${subject.name}" berhasil dihapus.`);
       load();
     } catch (err) {
       setDeleteError(getApiErrorMessage(err, `Gagal menghapus "${subject.name}".`));
@@ -108,7 +111,11 @@ export default function SubjectsPage() {
           isOpen={isOpen}
           onClose={closeModal}
           subject={editing}
-          onSaved={() => { closeModal(); load(); }}
+          onSaved={() => {
+            closeModal();
+            toast.success(editing ? 'Mata pelajaran berhasil diubah.' : 'Mata pelajaran baru berhasil ditambahkan.');
+            load();
+          }}
         />
       )}
     </div>

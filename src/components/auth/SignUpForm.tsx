@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiClient, getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '../../lib/apiClient';
+import { useToast } from '../../hooks/useToast';
 import type { ParentRegistrationRequest, ParentRegistrationResponse, PrivacyPolicyResponse } from '../../types/auth';
 
 interface FieldErrors {
@@ -14,6 +15,7 @@ interface FieldErrors {
 
 export function SignUpForm() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -22,7 +24,6 @@ export function SignUpForm() {
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
   const [policyVersion, setPolicyVersion] = useState<string | null>(null);
   const [policyLoadError, setPolicyLoadError] = useState(false);
 
@@ -45,7 +46,6 @@ export function SignUpForm() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setFormError(null);
 
     const clientErrors = validateClientSide();
     if (!policyVersion) {
@@ -79,13 +79,13 @@ export function SignUpForm() {
           (mapped as Record<string, string>)[d.field ?? 'form'] = d.message;
         }
         setFieldErrors(mapped);
-        setFormError('Periksa kembali data yang kamu isi.');
+        toast.error('Periksa kembali data yang kamu isi.');
       } else if (code === 'EMAIL_ALREADY_REGISTERED') {
         setFieldErrors({ email: 'Email ini sudah terdaftar. Coba masuk atau gunakan email lain.' });
       } else if (code === 'NISN_NOT_FOUND') {
         setFieldErrors({ studentNisn: 'NISN tidak ditemukan/tidak valid. Pastikan penulisannya benar.' });
       } else {
-        setFormError(getApiErrorMessage(err, 'Registrasi gagal. Coba lagi.'));
+        toast.error(getApiErrorMessage(err, 'Registrasi gagal. Coba lagi.'));
       }
     } finally {
       setIsSubmitting(false);
@@ -104,12 +104,6 @@ export function SignUpForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5" noValidate>
-        {formError && (
-          <div role="alert" className="rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] leading-relaxed text-error-700">
-            {formError}
-          </div>
-        )}
-
         <Field label="Nama lengkap" htmlFor="fullName" error={fieldErrors.fullName}>
           <input
             id="fullName"

@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { Link, useLocation } from "react-router";
-import { LayoutDashboard, PieChart, User } from "lucide-react";
+import { LayoutDashboard, PieChart, Calendar, User, Database, ClipboardCheck, HandCoins } from "lucide-react";
 
 import { useSidebar } from "../context/SidebarContext";
 
@@ -12,7 +12,11 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { icon: <LayoutDashboard />, name: "Dasbor", path: "/dashboard" },
+  { icon: <Database />, name: "Data Master", path: "/data-master" },
+  { icon: <Calendar />, name: "Jadwal Pembelajaran", path: "/schedules" },
+  { icon: <ClipboardCheck />, name: "Presensi", path: "/attendance" },
   { icon: <PieChart />, name: "Laporan Presensi", path: "/reports" },
+  { icon: <HandCoins />, name: "Donasi", path: "/donations" },
   { icon: <User />, name: "Profil Saya", path: "/profile" },
 ];
 
@@ -21,7 +25,7 @@ const AppSidebar: React.FC = () => {
   const location = useLocation();
 
   const isActive = useCallback(
-    (path: string) => location.pathname === path,
+    (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`),
     [location.pathname]
   );
 

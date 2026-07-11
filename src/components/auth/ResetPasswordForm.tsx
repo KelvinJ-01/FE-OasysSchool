@@ -2,14 +2,15 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, ArrowRight } from 'lucide-react';
 import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
+import { useToast } from '../../hooks/useToast';
 import type { PasswordResetRequest, MessageResponse } from '../../types/auth';
 
 export default function ResetPasswordForm() {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | undefined>();
-  const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function validate(): boolean {
@@ -27,7 +28,6 @@ export default function ResetPasswordForm() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setFormError(null);
     if (!validate()) return;
 
     try {
@@ -36,7 +36,7 @@ export default function ResetPasswordForm() {
       await apiClient.post<MessageResponse>('/auth/password-resets', payload);
       navigate('/verify-code', { state: { email, purpose: 'password_reset' } });
     } catch (err) {
-      setFormError(getApiErrorMessage(err, 'Gagal mengirim kode. Silakan coba lagi.'));
+      toast.error(getApiErrorMessage(err, 'Gagal mengirim kode. Silakan coba lagi.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -48,12 +48,6 @@ export default function ResetPasswordForm() {
       <p className="mt-1.5 text-[14px] text-gray-500">
         Masukkan email akun Anda, kami akan mengirimkan kode verifikasi 6 digit.
       </p>
-
-      {formError && (
-        <div role="alert" className="mt-5 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] leading-relaxed text-error-700">
-          {formError}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5" noValidate>
         <div>

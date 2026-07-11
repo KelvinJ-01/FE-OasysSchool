@@ -6,8 +6,13 @@ export interface UserProfileResponse {
   fullName: string;
   email: string;
   phone: string | null;
+  photoUrl: string | null;
   accountStatus: AccountStatus;
   createdAt: string;
+}
+
+export interface UploadPhotoResponse {
+  photoUrl: string;
 }
 
 export interface UpdateProfileRequest {

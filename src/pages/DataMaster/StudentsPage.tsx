@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../hooks/useToast';
 import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { Modal } from '../../components/ui/modal';
@@ -19,6 +20,7 @@ const PAGE_SIZE = 10;
 
 export default function StudentsPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const isAdmin = user?.role === 'administrator';
 
   const [items, setItems] = useState<Student[]>([]);
@@ -194,6 +196,7 @@ export default function StudentsPage() {
           classes={classes}
           onSaved={() => {
             closeFormModal();
+            toast.success(editingStudent ? 'Data siswa berhasil diubah.' : 'Siswa baru berhasil ditambahkan.');
             loadStudents();
           }}
         />
@@ -206,6 +209,7 @@ export default function StudentsPage() {
           student={editingStudent}
           onSaved={() => {
             closeStatusModal();
+            toast.success('Status siswa berhasil diubah.');
             loadStudents();
           }}
         />
@@ -213,6 +217,8 @@ export default function StudentsPage() {
     </div>
   );
 }
+
+// --- Modal Tambah/Ubah Siswa -------------------------------------------------
 
 function StudentFormModal({
   isOpen,
@@ -332,6 +338,8 @@ function StudentFormModal({
     </Modal>
   );
 }
+
+// --- Modal Ubah Status Siswa -------------------------------------------------
 
 function StudentStatusModal({
   isOpen,

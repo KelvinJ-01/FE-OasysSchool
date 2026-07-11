@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type C
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, CircleCheck } from 'lucide-react';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
+import { useToast } from '../../hooks/useToast';
 import type {
   PasswordResetRequest,
   PasswordResetVerifyOtpRequest,
@@ -25,6 +26,7 @@ interface LocationState {
 export default function VerifyCodeForm() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
   const { email, purpose = 'email_verification' } = (location.state as LocationState | null) ?? {};
 
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
@@ -119,7 +121,6 @@ export default function VerifyCodeForm() {
 
   async function handleResend() {
     if (cooldown > 0 || !email) return;
-    setError(null);
     setIsResending(true);
     try {
       if (purpose === 'password_reset') {
@@ -130,9 +131,10 @@ export default function VerifyCodeForm() {
         await apiClient.post<MessageResponse>('/auth/parent-registrations/resend-otp', payload);
       }
       setCooldown(RESEND_COOLDOWN_SECONDS);
+      toast.success('Kode baru telah dikirim ke email Anda.');
     } catch (err) {
       const code_ = getApiErrorCode(err);
-      setError(code_ === 'RESEND_RATE_LIMITED' ? 'Terlalu sering meminta kirim ulang. Coba beberapa saat lagi.' : getApiErrorMessage(err, 'Gagal mengirim ulang kode.'));
+      toast.error(code_ === 'RESEND_RATE_LIMITED' ? 'Terlalu sering meminta kirim ulang. Coba beberapa saat lagi.' : getApiErrorMessage(err, 'Gagal mengirim ulang kode.'));
     } finally {
       setIsResending(false);
     }

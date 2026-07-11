@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
+import { useToast } from '../../hooks/useToast';
 import type { ChangePasswordRequest } from '../../types/profile';
 import type { MessageResponse } from '../../types/auth';
 
@@ -19,11 +20,10 @@ interface FieldErrors {
 const EMPTY_VALUES: FormValues = { currentPassword: '', newPassword: '', confirmNewPassword: '' };
 
 export function ChangePasswordCard() {
+  const { toast } = useToast();
   const [values, setValues] = useState<FormValues>(EMPTY_VALUES);
   const [visible, setVisible] = useState({ current: false, next: false, confirm: false });
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function validate(): boolean {
@@ -40,15 +40,13 @@ export function ChangePasswordCard() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setFormError(null);
-    setSuccessMessage(null);
     if (!validate()) return;
 
     setIsSubmitting(true);
     try {
       const payload: ChangePasswordRequest = { currentPassword: values.currentPassword, newPassword: values.newPassword };
       await apiClient.patch<MessageResponse>('/users/me/password', payload);
-      setSuccessMessage('Kata sandi berhasil diubah. Sesi di perangkat lain telah diakhiri demi keamanan.');
+      toast.success('Kata sandi berhasil diubah. Sesi di perangkat lain telah diakhiri demi keamanan.');
       setValues(EMPTY_VALUES);
     } catch (err) {
       const code = getApiErrorCode(err);
@@ -57,7 +55,7 @@ export function ChangePasswordCard() {
       } else if (code === 'PASSWORD_POLICY_VIOLATION') {
         setErrors({ newPassword: 'Kata sandi baru belum memenuhi kebijakan keamanan yang berlaku.' });
       } else {
-        setFormError(getApiErrorMessage(err, 'Gagal mengubah kata sandi.'));
+        toast.error(getApiErrorMessage(err, 'Gagal mengubah kata sandi.'));
       }
     } finally {
       setIsSubmitting(false);
@@ -107,17 +105,6 @@ export function ChangePasswordCard() {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
       <h3 className="mb-5 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Ganti Kata Sandi</h3>
-
-      {formError && (
-        <div role="alert" className="mb-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">
-          {formError}
-        </div>
-      )}
-      {successMessage && (
-        <div role="status" className="mb-4 rounded-md border border-secondary-200 bg-secondary-50 px-3.5 py-3 text-[13.5px] text-secondary-700">
-          {successMessage}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         {field('currentPassword', 'Kata Sandi Saat Ini', 'current', 'current-password')}

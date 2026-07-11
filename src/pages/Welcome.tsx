@@ -71,6 +71,13 @@ export default function Welcome() {
           <p className="mt-8 max-w-md text-center text-[12.5px] leading-relaxed text-white/40">
             Sudah terdaftar sebagai orang tua? Gunakan Aplikasi Mobile Oasys School untuk penggunaan sehari-hari.
           </p>
+
+          <Link
+            to="/donasi"
+            className="mt-6 text-[12.5px] font-medium text-secondary-400 hover:text-secondary-300 hover:underline"
+          >
+            Dukung pengembangan Oasys School →
+          </Link>
         </div>
       </div>
     </>

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../hooks/useToast';
 import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { Modal } from '../../components/ui/modal';
@@ -13,6 +14,7 @@ const PAGE_SIZE = 10;
 
 export default function ClassesPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const isAdmin = user?.role === 'administrator';
 
   const [items, setItems] = useState<ClassEntity[]>([]);
@@ -45,6 +47,7 @@ export default function ClassesPage() {
     if (!window.confirm(`Hapus kelas "${cls.name}"? Tindakan ini tidak bisa dibatalkan.`)) return;
     try {
       await apiClient.delete(`/classes/${cls.id}`);
+      toast.success(`Kelas "${cls.name}" berhasil dihapus.`);
       load();
     } catch (err) {
       setDeleteError(getApiErrorMessage(err, `Gagal menghapus "${cls.name}" — kemungkinan masih ada siswa aktif di kelas ini.`));
@@ -109,7 +112,11 @@ export default function ClassesPage() {
           isOpen={isOpen}
           onClose={closeModal}
           cls={editing}
-          onSaved={() => { closeModal(); load(); }}
+          onSaved={() => {
+            closeModal();
+            toast.success(editing ? 'Kelas berhasil diubah.' : 'Kelas baru berhasil ditambahkan.');
+            load();
+          }}
         />
       )}
     </div>

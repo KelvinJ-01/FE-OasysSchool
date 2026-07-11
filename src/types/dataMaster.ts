@@ -1,6 +1,5 @@
 import type { Semester, StudentStatus } from './entities';
 
-// --- Siswa -------------------------------------------------------------
 export interface CreateStudentRequest {
   fullName: string;
   nisn: string;
@@ -17,7 +16,6 @@ export interface UpdateStudentStatusRequest {
   effectiveDate: string;
 }
 
-// --- Kelas ---------------------------------------------------------------
 export interface CreateClassRequest {
   name: string;
   gradeLevel?: string;
@@ -25,7 +23,6 @@ export interface CreateClassRequest {
 
 export type UpdateClassRequest = Partial<CreateClassRequest>;
 
-// --- Tahun Ajaran ----------------------------------------------------------
 export interface CreateAcademicTermRequest {
   yearLabel: string;
   semester: Semester;
@@ -36,14 +33,11 @@ export interface CreateAcademicTermRequest {
 
 export type UpdateAcademicTermRequest = Partial<CreateAcademicTermRequest>;
 
-// --- Mata Pelajaran --------------------------------------------------------
 export interface CreateSubjectRequest {
   name: string;
 }
 
 export type UpdateSubjectRequest = Partial<CreateSubjectRequest>;
-
-// --- Direktori Guru & Orang Tua (baca, baru — v1.7, API Spec §3.2a) --------
 
 export interface LinkedStudentSummary {
   id: string;
@@ -53,7 +47,7 @@ export interface LinkedStudentSummary {
 
 export interface UserDirectoryEntry {
   id: string;
-  role: 'teacher' | 'parent';
+  role: 'teacher' | 'parent' | 'administrator'; // administrator baru — v2.2
   fullName: string;
   email: string;
   phone: string | null;

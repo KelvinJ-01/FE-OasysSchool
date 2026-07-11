@@ -1,43 +1,29 @@
-import GridShape from "../../components/common/GridShape";
-import { Link } from "react-router";
-import PageMeta from "../../components/common/PageMeta";
+import { Link } from 'react-router-dom';
+import { SearchX } from 'lucide-react';
+import PageMeta from '../../components/common/PageMeta';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function NotFound() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <>
-      <PageMeta
-        title="React.js 404 Dashboard | TailAdmin - React.js Admin Dashboard Template"
-        description="This is React.js 404 Dashboard page for TailAdmin - React.js Tailwind CSS Admin Dashboard Template"
-      />
-      <div className="relative flex flex-col items-center justify-center min-h-screen p-6 overflow-hidden z-1">
-        <GridShape />
-        <div className="mx-auto w-full max-w-[242px] text-center sm:max-w-[472px]">
-          <h1 className="mb-8 font-bold text-gray-800 text-title-md dark:text-white/90 xl:text-title-2xl">
-            ERROR
-          </h1>
-
-          <img src="/images/error/404.svg" alt="404" className="dark:hidden" />
-          <img
-            src="/images/error/404-dark.svg"
-            alt="404"
-            className="hidden dark:block"
-          />
-
-          <p className="mt-10 mb-6 text-base text-gray-700 dark:text-gray-400 sm:text-lg">
-            We can’t seem to find the page you are looking for!
-          </p>
-
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-5 py-3.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
-          >
-            Back to Home Page
-          </Link>
-        </div>
-        {/* <!-- Footer --> */}
-        <p className="absolute text-sm text-center text-gray-500 -translate-x-1/2 bottom-6 left-1/2 dark:text-gray-400">
-          &copy; {new Date().getFullYear()} - TailAdmin
+      <PageMeta title="Halaman Tidak Ditemukan | Oasys School" description="Halaman yang Anda cari tidak ditemukan" />
+      <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+        <span className="flex size-16 items-center justify-center rounded-full bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400">
+          <SearchX size={32} aria-hidden="true" />
+        </span>
+        <p className="mt-6 text-title-md font-semibold text-gray-800 dark:text-white/90">404</p>
+        <h1 className="mt-2 text-theme-xl font-semibold text-gray-800 dark:text-white/90">Halaman Tidak Ditemukan</h1>
+        <p className="mt-2 max-w-sm text-theme-sm text-gray-500 dark:text-gray-400">
+          Halaman yang Anda cari mungkin sudah dipindahkan, dihapus, atau alamatnya salah ketik.
         </p>
+        <Link
+          to={isAuthenticated ? '/dashboard' : '/'}
+          className="mt-6 flex h-11 items-center justify-center rounded-md bg-brand-500 px-6 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600"
+        >
+          {isAuthenticated ? 'Kembali ke Dasbor' : 'Kembali ke Beranda'}
+        </Link>
       </div>
     </>
   );

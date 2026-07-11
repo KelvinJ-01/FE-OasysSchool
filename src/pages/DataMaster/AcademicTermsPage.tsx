@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Plus, Pencil } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../hooks/useToast';
 import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { Modal } from '../../components/ui/modal';
@@ -18,6 +19,7 @@ function formatDate(d: string) {
 
 export default function AcademicTermsPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const isAdmin = user?.role === 'administrator';
 
   const [items, setItems] = useState<AcademicTerm[]>([]);
@@ -116,7 +118,11 @@ export default function AcademicTermsPage() {
           isOpen={isOpen}
           onClose={closeModal}
           term={editing}
-          onSaved={() => { closeModal(); load(); }}
+          onSaved={() => {
+            closeModal();
+            toast.success(editing ? 'Tahun ajaran berhasil diubah.' : 'Tahun ajaran baru berhasil ditambahkan.');
+            load();
+          }}
         />
       )}
     </div>

@@ -4,6 +4,7 @@ import { Lock, Eye, EyeOff, CircleCheck } from 'lucide-react';
 import { Modal } from '../ui/modal';
 import { useModal } from '../../hooks/useModal';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
+import { useToast } from '../../hooks/useToast';
 import type { PasswordResetConfirmRequest, MessageResponse } from '../../types/auth';
 
 interface FormValues {
@@ -24,6 +25,7 @@ interface LocationState {
 export default function NewPasswordForm() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
   const { email, resetToken } = (location.state as LocationState | null) ?? {};
   const { isOpen, openModal, closeModal } = useModal();
 
@@ -32,7 +34,6 @@ export default function NewPasswordForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [values, setValues] = useState<FormValues>({ password: '', confirmPassword: '' });
   const [errors, setErrors] = useState<FormErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!resetToken) {
@@ -56,7 +57,6 @@ export default function NewPasswordForm() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setFormError(null);
     if (!validate() || !resetToken) return;
 
     try {
@@ -67,11 +67,12 @@ export default function NewPasswordForm() {
     } catch (err) {
       const code = getApiErrorCode(err);
       if (code === 'RESET_TOKEN_INVALID_OR_EXPIRED') {
-        setFormError('Sesi reset kata sandi sudah kedaluwarsa. Silakan ulangi dari awal.');
+        toast.error('Sesi reset kata sandi sudah kedaluwarsa. Silakan ulangi dari awal.');
+        navigate('/reset-password', { replace: true });
       } else if (code === 'PASSWORD_POLICY_VIOLATION') {
         setErrors({ password: 'Kata sandi belum memenuhi kebijakan keamanan yang berlaku.' });
       } else {
-        setFormError(getApiErrorMessage(err, 'Gagal mengubah kata sandi. Silakan coba lagi.'));
+        toast.error(getApiErrorMessage(err, 'Gagal mengubah kata sandi. Silakan coba lagi.'));
       }
     } finally {
       setIsSubmitting(false);
@@ -94,12 +95,6 @@ export default function NewPasswordForm() {
         Kata sandi baru harus berbeda dari kata sandi yang pernah digunakan sebelumnya
         {email ? <> untuk <span className="font-medium text-gray-700">{email}</span></> : ''}.
       </p>
-
-      {formError && (
-        <div role="alert" className="mt-5 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] leading-relaxed text-error-700">
-          {formError}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5" noValidate>
         <div>

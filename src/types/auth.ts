@@ -160,6 +160,7 @@ export interface JwtPayload {
   role: UserRole;
   schoolId: string | null;
   fullName: string; // baru — v1.5
+  photoUrl?: string | null; // baru — v1.9
   platform?: Platform;
   exp: number;
   iat?: number;
@@ -170,6 +171,7 @@ export interface AuthUser {
   role: UserRole;
   schoolId: string | null;
   fullName?: string;
+  photoUrl?: string | null;
   email?: string;
 }
 
