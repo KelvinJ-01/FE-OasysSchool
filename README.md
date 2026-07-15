@@ -159,8 +159,31 @@ Empat dokumen kontrak ini adalah **sumber kebenaran** untuk kontrak API, skema d
 
 ## Status & Keterbatasan Diketahui
 
-- **Verifikasi backend** — sebagian endpoint sudah didokumentasikan lengkap di API Spec tapi implementasi NestJS-nya perlu dicek satu-satu: `/dashboard/summary`, `/users/me` (+foto), `/legal/privacy-policy`, `/users` (direktori Guru/Admin/Orang Tua), `/schedules` PATCH/DELETE, `/attendance-records/*`, `/donations`.
-- **Testing otomatis** — belum ada sama sekali (unit maupun E2E).
+- **Verifikasi backend** — sebagian endpoint sudah didokumentasikan lengkap di API Spec tapi implementasi NestJS-nya perlu dicek satu-satu: `/dashboard/summary`, `/users/me` (+foto), `/legal/privacy-policy`, `/users` (direktori Guru/Admin/Orang Tua), `/users/me/classes` (baru — v2.4), `/schedules` PATCH/DELETE, `/attendance-records/*`, `/donations`.
+- **Testing otomatis** — kerangka unit test (Vitest) sudah disiapkan: lihat `src/lib/tokenStorage.test.ts` dan `src/lib/apiClient.test.ts`. Jalankan dengan `npm i -D vitest jsdom && npm test`. E2E belum ada.
 - **Tata letak file ekspor (XLSX/CSV)** — spesifikasinya sudah didokumentasikan (API Spec §3.8), tapi implementasi generate file ada di **backend**, bukan repo ini.
 - **`/dashboard/summary`, `GET /users`, dll** tidak punya field "target/goal" untuk progres — jangan tambahkan bar persentase yang mengarang angka di frontend tanpa data backing.
 - **Refresh token & profil** — `fullName`/`photoUrl`/`email` di UI berasal dari JWT, bukan fetch real-time; ada jeda sampai token berikutnya di-refresh setelah perubahan di halaman Profil.
+
+## Keamanan Token (penting)
+
+- **Access token disimpan DI MEMORI** (bukan `localStorage`) — mitigasi pencurian token via XSS. Hilang saat reload, lalu dipulihkan otomatis dari refresh token (silent refresh di `AuthContext`).
+- **Refresh token** masih di `localStorage` untuk sekarang. Titik migrasi ke cookie `httpOnly` diisolasi di satu file: `src/lib/tokenStorage.ts` — cukup ubah file itu (lihat komentar di dalamnya) tanpa menyentuh `apiClient`/`AuthContext`.
+- **Refresh proaktif**: access token yang mendekati kedaluwarsa (buffer `VITE_TOKEN_EXPIRY_BUFFER_MS`) ditukar sebelum request dikirim, mengurangi 401+retry.
+
+## ⚠️ Fitur Ditunda — Validasi NISN & NPSN (Dapodik/EMIS)
+
+Validasi NISN (siswa) & NPSN (sekolah) ke Dapodik/EMIS **ditunda** sampai API resmi tersedia (PRD §13). Titik kendali tunggal ada di **`src/config/featureFlags.ts`**:
+
+- `validateNisnAgainstDapodik: false`
+- `validateNpsnAgainstDapodik: false`
+
+Saat API sudah didapat, set flag terkait ke `true` lalu cari komentar **`TODO(dapodik)`** di seluruh proyek (mis. `src/components/auth/SignUpForm.tsx`) untuk mengaktifkan pemanggilannya. Sekarang NISN hanya divalidasi **format 10 digit** di klien; pencocokan penuh tetap dilakukan server terhadap Data Master.
+
+## Konvensi Arsitektur (baru)
+
+- **Config terpusat**: seluruh `import.meta.env` dibaca sekali di `src/config/env.ts` (tervalidasi + bertipe benar). Komponen tidak menyentuh `import.meta.env` langsung.
+- **Service layer**: pemanggilan API dikelompokkan di `src/services/*` (mis. `classesService`, `studentsService`).
+- **Server state via TanStack Query**: gunakan hook di `src/hooks/use*.ts` (mis. `useStudents`) alih-alih `useEffect` + `apiClient` manual. QueryClient dikonfigurasi di `src/lib/queryClient.ts`.
+- **RBAC berlapis**: route guard (`ProtectedRoute`) + menu sidebar difilter per peran + aksi tulis di-gate `isAdmin`. Dropdown kelas memakai `getSelectableClasses(role)` (Guru → `/users/me/classes`, Admin → `/classes`).
+- **Code splitting**: seluruh halaman di-`lazy()` di `App.tsx`; ada `ErrorBoundary` global.

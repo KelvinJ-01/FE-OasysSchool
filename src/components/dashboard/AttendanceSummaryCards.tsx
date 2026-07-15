@@ -1,23 +1,17 @@
 import { useEffect, useState } from 'react';
-import { CircleCheck, Thermometer, FileText, CircleX, Clock } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
 import { Skeleton } from '../common/Skeleton';
 import type { DashboardSummaryResponse } from '../../types/auth';
 
-interface StatDef {
-  key: keyof DashboardSummaryResponse['attendance'];
-  label: string;
-  icon: React.ReactNode;
-  bg: string;
-  text: string;
-}
+type StatKey = keyof DashboardSummaryResponse['attendance'];
 
-const STATS: StatDef[] = [
-  { key: 'hadir', label: 'Hadir', icon: <CircleCheck size={20} aria-hidden="true" />, bg: 'bg-secondary-50', text: 'text-secondary-600' },
-  { key: 'sakit', label: 'Sakit', icon: <Thermometer size={20} aria-hidden="true" />, bg: 'bg-warning-50', text: 'text-warning-600' },
-  { key: 'izin', label: 'Izin', icon: <FileText size={20} aria-hidden="true" />, bg: 'bg-blue-light-50', text: 'text-blue-light-600' },
-  { key: 'alpa', label: 'Alpa', icon: <CircleX size={20} aria-hidden="true" />, bg: 'bg-error-50', text: 'text-error-600' },
-  { key: 'belumTercatat', label: 'Belum Tercatat', icon: <Clock size={20} aria-hidden="true" />, bg: 'bg-gray-100', text: 'text-gray-500' },
+const SEGMENTS: Array<{ key: StatKey; label: string; bar: string; dot: string }> = [
+  { key: 'hadir', label: 'Hadir', bar: 'bg-secondary-500', dot: 'bg-secondary-500' },
+  { key: 'sakit', label: 'Sakit', bar: 'bg-warning-400', dot: 'bg-warning-400' },
+  { key: 'izin', label: 'Izin', bar: 'bg-blue-light-400', dot: 'bg-blue-light-400' },
+  { key: 'alpa', label: 'Alpa', bar: 'bg-error-500', dot: 'bg-error-500' },
+  { key: 'belumTercatat', label: 'Belum Tercatat', bar: 'bg-gray-300 dark:bg-gray-600', dot: 'bg-gray-300 dark:bg-gray-600' },
 ];
 
 export function AttendanceSummaryCards() {
@@ -33,7 +27,7 @@ export function AttendanceSummaryCards() {
         const code = getApiErrorCode(err);
         setErrorMessage(
           code === 'NO_ACTIVE_ACADEMIC_TERM'
-            ? 'Belum ada tahun ajaran aktif untuk sekolah Anda — hubungi Tim Pengembang untuk mengaktifkannya.'
+            ? 'Sekolah Anda belum punya tahun ajaran yang aktif. Silakan hubungi Tim Pengembang untuk mengaktifkannya.'
             : getApiErrorMessage(err, 'Gagal memuat ringkasan presensi.'),
         );
       })
@@ -41,13 +35,7 @@ export function AttendanceSummaryCards() {
   }, []);
 
   if (isLoading) {
-    return (
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        {STATS.map((s) => (
-          <Skeleton key={s.key} className="h-[104px] rounded-xl" />
-        ))}
-      </div>
-    );
+    return <Skeleton className="h-[220px] rounded-2xl" />;
   }
 
   if (errorMessage || !summary) {
@@ -58,26 +46,45 @@ export function AttendanceSummaryCards() {
     );
   }
 
+  const total = summary.totalStudents;
+  const hadir = summary.attendance.hadir;
+  const rate = total > 0 ? Math.round((hadir / total) * 100) : 0;
+  const scopeLabel = summary.scope === 'class' ? 'Kelas yang Anda ampu' : 'Seluruh sekolah';
+
   return (
     <div>
-      <p className="mb-3 text-theme-xs font-medium uppercase text-gray-400">
-        {summary.scope === 'class' ? 'Kelas yang Anda ampu' : 'Seluruh sekolah'} · {summary.totalStudents} siswa
-      </p>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        {STATS.map((s) => {
-          const count = summary.attendance[s.key];
-          const pct = summary.totalStudents > 0 ? Math.round((count / summary.totalStudents) * 100) : 0;
-          return (
-            <div key={s.key} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-              <span className={`flex size-9 items-center justify-center rounded-lg ${s.bg} ${s.text}`}>{s.icon}</span>
-              <p className="mt-3 text-title-sm font-semibold text-gray-800 dark:text-white/90">{count}</p>
-              <p className="text-theme-xs text-gray-500 dark:text-gray-400">
-                {s.label} · {pct}%
-              </p>
-            </div>
-          );
-        })}
+      <div className="rounded-2xl bg-[#1b3a6b] p-7 text-white dark:bg-[#16305a] sm:p-8">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-theme-xs font-medium uppercase tracking-wide text-white/60">Tingkat Kehadiran Hari Ini</p>
+            <p className="mt-2 flex items-baseline gap-2">
+              <span className="text-[56px] font-semibold leading-none sm:text-[64px]">{rate}%</span>
+              <span className="text-theme-sm text-white/70">{hadir} dari {total} siswa hadir</span>
+            </p>
+          </div>
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10">
+            <Users size={22} aria-hidden="true" />
+          </span>
+        </div>
+
+        <div className="mt-8 flex h-3.5 w-full overflow-hidden rounded-full bg-white/10" role="img" aria-label={`Proporsi status presensi: ${SEGMENTS.map((s) => `${s.label} ${summary.attendance[s.key]}`).join(', ')}`}>
+          {SEGMENTS.map((s) => {
+            const count = summary.attendance[s.key];
+            if (count <= 0 || total <= 0) return null;
+            return <div key={s.key} className={s.bar} style={{ width: `${(count / total) * 100}%` }} />;
+          })}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+          {SEGMENTS.map((s) => (
+            <span key={s.key} className="flex items-center gap-1.5 text-theme-xs text-white/70">
+              <span className={`size-2 rounded-full ${s.dot}`} aria-hidden="true" />
+              {s.label} {summary.attendance[s.key]}
+            </span>
+          ))}
+        </div>
+        <p className="mt-4 text-theme-xs text-white/50">{scopeLabel} · {total} siswa aktif</p>
       </div>
+
     </div>
   );
 }

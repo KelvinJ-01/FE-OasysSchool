@@ -83,7 +83,8 @@ export default function VerifyCodeForm() {
     setError(null);
 
     if (!email) {
-      setError('Sesi verifikasi tidak lengkap. Ulangi dari awal.');
+      toast.error('Sesi verifikasi tidak lengkap. Mengarahkan ulang…');
+      navigate(purpose === 'password_reset' ? '/reset-password' : '/signup', { replace: true });
       return;
     }
     if (code.length !== CODE_LENGTH) {
@@ -149,8 +150,9 @@ export default function VerifyCodeForm() {
         </div>
         <h1 className="text-[20px] font-semibold text-gray-900">Email berhasil diverifikasi</h1>
         <p className="mt-2 text-[14px] leading-relaxed text-gray-500">
-          Akun <span className="font-medium text-gray-700">{verifiedEmail}</span> sudah aktif. Silakan login melalui{' '}
-          <span className="font-medium text-gray-900">Aplikasi Mobile Oasys School</span> untuk mulai memantau presensi anak Anda.
+          Satu langkah lagi: akun <span className="font-medium text-gray-700">{verifiedEmail}</span> kini menunggu
+          persetujuan Admin sekolah. Setelah disetujui, Anda akan menerima email pemberitahuan dan bisa langsung login
+          lewat <span className="font-medium text-gray-900">Aplikasi Mobile Oasys School</span>.
         </p>
         <Link
           to="/"

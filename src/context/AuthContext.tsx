@@ -1,18 +1,22 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import { useToast } from '../hooks/useToast';
+import { env } from '../config/env';
 import {
   apiClient,
-  clearStoredToken,
-  clearStoredRefreshToken,
   getApiErrorCode,
   getApiErrorMessage,
-  getStoredToken,
   registerUnauthorizedHandler,
   revokeSession,
-  setStoredToken,
-  setStoredRefreshToken,
 } from '../lib/apiClient';
+import {
+  clearAllTokens,
+  getAccessToken,
+  getRefreshToken,
+  setAccessToken,
+  setRefreshToken,
+} from '../lib/tokenStorage';
 import type { AuthUser, JwtPayload, LoginRequest, LoginResponse } from '../types/auth';
 
 interface AuthContextValue {
@@ -21,6 +25,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateUser: (partial: Partial<AuthUser>) => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -37,6 +42,7 @@ function decodeUserFromToken(token: string): AuthUser | null {
       schoolId: payload.schoolId,
       fullName: payload.fullName,
       photoUrl: payload.photoUrl,
+      email: payload.email,
     };
   } catch {
     return null;
@@ -49,8 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   const clearLocalSession = useCallback(() => {
-    clearStoredToken();
-    clearStoredRefreshToken();
+    clearAllTokens();
     setUser(null);
   }, []);
 
@@ -60,29 +65,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearLocalSession, toast]);
 
   useEffect(() => {
-    const token = getStoredToken();
-    if (token) {
-      const decoded = decodeUserFromToken(token);
-      if (decoded) {
-        setUser(decoded);
-      } else {
-        clearStoredToken();
-      }
-    }
-    setIsLoading(false);
-  }, []);
-
-  useEffect(() => {
     registerUnauthorizedHandler(handleForcedLogout);
   }, [handleForcedLogout]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restoreSession() {
+      const accessToken = getAccessToken();
+      if (accessToken) {
+        const decoded = decodeUserFromToken(accessToken);
+        if (decoded && !cancelled) {
+          setUser(decoded);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      const storedRefreshToken = getRefreshToken();
+      if (storedRefreshToken) {
+        try {
+          const { data } = await axios.post<LoginResponse>(
+            `${env.apiBaseUrl}/auth/refresh-token`,
+            { refreshToken: storedRefreshToken, platform: env.appPlatform },
+          );
+          setAccessToken(data.accessToken);
+          setRefreshToken(data.refreshToken);
+          const decoded = decodeUserFromToken(data.accessToken);
+          if (!cancelled) setUser(decoded);
+        } catch {
+          if (!cancelled) clearAllTokens();
+        }
+      }
+
+      if (!cancelled) setIsLoading(false);
+    }
+
+    void restoreSession();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
-    const payload: LoginRequest = { email, password, platform: 'web' };
+    const payload: LoginRequest = { email, password, platform: env.appPlatform };
 
     try {
       const { data } = await apiClient.post<LoginResponse>('/auth/login', payload);
-      setStoredToken(data.accessToken);
-      setStoredRefreshToken(data.refreshToken);
+      setAccessToken(data.accessToken);
+      setRefreshToken(data.refreshToken);
 
       const decoded = decodeUserFromToken(data.accessToken);
       setUser(decoded ?? { id: '', role: data.role, schoolId: data.schoolId });
@@ -100,14 +131,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    revokeSession().catch(() => {
-    });
+    void revokeSession().catch(() => undefined);
     clearLocalSession();
   }, [clearLocalSession]);
 
+  const updateUser = useCallback((partial: Partial<AuthUser>) => {
+    setUser((prev) => (prev ? { ...prev, ...partial } : prev));
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isAuthenticated: user !== null, isLoading, login, logout }),
-    [user, isLoading, login, logout],
+    () => ({ user, isAuthenticated: user !== null, isLoading, login, logout, updateUser }),
+    [user, isLoading, login, logout, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

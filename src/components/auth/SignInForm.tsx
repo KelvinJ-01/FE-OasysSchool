@@ -1,39 +1,42 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useLocation } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { Eye, EyeOff } from 'lucide-react';
 import { Spinner } from '../common/Spinner';
 
 export function SignInForm() {
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const location = useLocation();
+  const navigate = useNavigate();
   const successMessage = (location.state as { message?: string } | null)?.message;
+  const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/dashboard';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Pesan sukses dari navigasi (mis. habis verifikasi email) — ditampilkan
-  // sekali di awal, jadi cukup lewat toast saat mount, bukan banner statis
-  // yang tetap nongkrong di layar walau sudah tidak relevan.
   useEffect(() => {
     if (successMessage) toast.success(successMessage);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [successMessage, toast]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
       await login(email, password);
+      navigate(fromPath, { replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Gagal masuk. Coba lagi.');
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  if (!isLoading && isAuthenticated) {
+    return <Navigate to={fromPath} replace />;
   }
 
   return (

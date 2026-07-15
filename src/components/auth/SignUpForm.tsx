@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { apiClient, getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '../../lib/apiClient';
 import { useToast } from '../../hooks/useToast';
+import { env } from '../../config/env';
+import { toTitleCase, validatePersonName } from '../../lib/format';
 import { Spinner } from '../common/Spinner';
 import type { ParentRegistrationRequest, ParentRegistrationResponse, PrivacyPolicyResponse } from '../../types/auth';
 
@@ -37,10 +39,14 @@ export function SignUpForm() {
 
   function validateClientSide(): FieldErrors {
     const errors: FieldErrors = {};
-    if (fullName.trim().length < 3) errors.fullName = 'Nama lengkap minimal 3 karakter.';
+    { const nameErr = validatePersonName(fullName); if (nameErr) errors.fullName = nameErr; }
     if (!/^\S+@\S+\.\S+$/.test(email)) errors.email = 'Format email tidak valid.';
     if (password.length < 8) errors.password = 'Kata sandi minimal 8 karakter.';
-    if (!/^\d{10}$/.test(studentNisn)) errors.studentNisn = 'NISN harus terdiri dari 10 digit angka.';
+
+    if (!/^\d{10}$/.test(studentNisn)) {
+      errors.studentNisn = 'NISN harus terdiri dari 10 digit angka.';
+    }
+
     if (!consentAccepted) errors.consent = 'Persetujuan wajib dicentang untuk melanjutkan.';
     return errors;
   }
@@ -60,11 +66,12 @@ export function SignUpForm() {
     setIsSubmitting(true);
 
     const payload: ParentRegistrationRequest = {
-      fullName: fullName.trim(),
+      fullName: toTitleCase(fullName),
       email: email.trim(),
       ...(phone.trim() ? { phone: phone.trim() } : {}),
       password,
       studentNisn,
+      channel: env.appPlatform,
       consent: { policyVersion: policyVersion as string, accepted: true },
     };
 
@@ -105,7 +112,7 @@ export function SignUpForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5" noValidate>
-        <Field label="Nama lengkap" htmlFor="fullName" error={fieldErrors.fullName}>
+        <Field required label="Nama lengkap" htmlFor="fullName" error={fieldErrors.fullName}>
           <input
             id="fullName"
             type="text"
@@ -117,7 +124,7 @@ export function SignUpForm() {
           />
         </Field>
 
-        <Field label="Email" htmlFor="email" error={fieldErrors.email}>
+        <Field required label="Email" htmlFor="email" error={fieldErrors.email}>
           <input
             id="email"
             type="email"
@@ -141,7 +148,7 @@ export function SignUpForm() {
           />
         </Field>
 
-        <Field label="Kata sandi" htmlFor="password" error={fieldErrors.password} helper="Minimal 8 karakter.">
+        <Field required label="Kata sandi" htmlFor="password" error={fieldErrors.password} helper="Minimal 8 karakter.">
           <input
             id="password"
             type="password"
@@ -154,6 +161,7 @@ export function SignUpForm() {
         </Field>
 
         <Field
+          required
           label="NISN anak"
           htmlFor="studentNisn"
           error={fieldErrors.studentNisn}
@@ -211,13 +219,6 @@ export function SignUpForm() {
           )}
         </button>
       </form>
-
-      <p className="mt-6 text-[13px] text-gray-500">
-        Sudah punya akun?{' '}
-        <Link to="/signin" className="font-medium text-brand-500 hover:underline">
-          Masuk
-        </Link>
-      </p>
     </div>
   );
 }
@@ -235,18 +236,21 @@ function Field({
   htmlFor,
   error,
   helper,
+  required,
   children,
 }: {
   label: string;
   htmlFor: string;
   error?: string;
   helper?: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div>
       <label htmlFor={htmlFor} className="mb-1.5 block text-[13.5px] font-medium text-gray-900">
         {label}
+        {required && <span aria-hidden="true" className="text-error-500"> *</span>}
       </label>
       {children}
       {error ? (

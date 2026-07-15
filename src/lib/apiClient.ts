@@ -1,50 +1,48 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { jwtDecode } from 'jwt-decode';
+import { env } from '../config/env';
 import type { ApiErrorDetail, ApiErrorResponse } from '../types/api';
-import type { RefreshTokenRequest, RefreshTokenResponse, LogoutRequest } from '../types/auth';
-
-const AUTH_TOKEN_KEY = 'oasys_access_token';
-const REFRESH_TOKEN_KEY = 'oasys_refresh_token';
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://api.oasysschool.id/api/v1';
+import type { JwtPayload, RefreshTokenRequest, RefreshTokenResponse, LogoutRequest } from '../types/auth';
+import {
+  clearAllTokens,
+  getAccessToken,
+  getRefreshToken,
+  setAccessToken,
+  setRefreshToken,
+} from './tokenStorage';
 
 export const apiClient = axios.create({
-  baseURL: BASE_URL,
+  baseURL: env.apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: false,
 });
 
-export function getStoredToken(): string | null {
-  return localStorage.getItem(AUTH_TOKEN_KEY);
+function accessTokenNeedsRefresh(): boolean {
+  const token = getAccessToken();
+  if (!token) return true;
+  try {
+    const { exp } = jwtDecode<JwtPayload>(token);
+    const expiresAtMs = exp * 1000;
+    return expiresAtMs - Date.now() <= env.tokenExpiryBufferMs;
+  } catch {
+    return true;
+  }
 }
 
-export function setStoredToken(token: string): void {
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
-}
+apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
+  const isAuthEndpoint = config.url?.includes('/auth/');
 
-export function clearStoredToken(): void {
-  localStorage.removeItem(AUTH_TOKEN_KEY);
-}
+  if (!isAuthEndpoint && getRefreshToken() && accessTokenNeedsRefresh()) {
+    try {
+      await ensureFreshAccessToken();
+    } catch {
+      void 0;
+    }
+  }
 
-export function getStoredRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
-}
-
-export function setStoredRefreshToken(token: string): void {
-  localStorage.setItem(REFRESH_TOKEN_KEY, token);
-}
-
-export function clearStoredRefreshToken(): void {
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-}
-
-function clearAllTokens(): void {
-  clearStoredToken();
-  clearStoredRefreshToken();
-}
-
-apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = getStoredToken();
+  const token = getAccessToken();
   if (token) {
     config.headers.set('Authorization', `Bearer ${token}`);
   }
@@ -58,87 +56,76 @@ export function registerUnauthorizedHandler(handler: UnauthorizedHandler): void 
   onUnauthorized = handler;
 }
 
-let isRefreshing = false;
-let pendingQueue: {
-  resolve: (token: string) => void;
-  reject: (err: unknown) => void;
-}[] = [];
-
-function resolveQueue(token: string): void {
-  pendingQueue.forEach((p) => p.resolve(token));
-  pendingQueue = [];
-}
-
-function rejectQueue(err: unknown): void {
-  pendingQueue.forEach((p) => p.reject(err));
-  pendingQueue = [];
-}
+let refreshPromise: Promise<string> | null = null;
 
 async function performRefresh(): Promise<string> {
-  const refreshToken = getStoredRefreshToken();
+  const refreshToken = getRefreshToken();
   if (!refreshToken) {
     throw new Error('NO_REFRESH_TOKEN');
   }
 
-  const body: RefreshTokenRequest = { refreshToken, platform: 'web' };
-  const { data } = await axios.post<RefreshTokenResponse>(`${BASE_URL}/auth/refresh-token`, body);
+  const body: RefreshTokenRequest = { refreshToken, platform: env.appPlatform };
+  const { data } = await axios.post<RefreshTokenResponse>(`${env.apiBaseUrl}/auth/refresh-token`, body);
 
-  setStoredToken(data.accessToken);
-  setStoredRefreshToken(data.refreshToken);
+  setAccessToken(data.accessToken);
+  setRefreshToken(data.refreshToken);
   return data.accessToken;
+}
+
+function ensureFreshAccessToken(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = performRefresh().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
 }
 
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiErrorResponse>) => {
-    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean; _netRetry?: boolean }) | undefined;
     const status = error.response?.status;
+    const requestUrl = originalRequest?.url ?? '';
 
-    const isAuthEndpoint = originalRequest?.url?.includes('/auth/');
-    if (status !== 401 || !originalRequest || isAuthEndpoint || originalRequest._retry) {
-      if (status === 401 && isAuthEndpoint) {
-        clearAllTokens();
-        onUnauthorized?.();
-      }
+    if (!error.response && originalRequest && !originalRequest._netRetry) {
+      originalRequest._netRetry = true;
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      return apiClient(originalRequest);
+    }
+
+    const isLoginOrLogout = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/logout');
+    const isRefreshEndpoint = requestUrl.includes('/auth/refresh-token');
+
+    if (isLoginOrLogout) {
+      return Promise.reject(error);
+    }
+
+    if (status === 401 && isRefreshEndpoint) {
+      clearAllTokens();
+      onUnauthorized?.();
+      return Promise.reject(error);
+    }
+
+    if (status !== 401 || !originalRequest || originalRequest._retry) {
       return Promise.reject(error);
     }
 
     originalRequest._retry = true;
-
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => {
-        pendingQueue.push({
-          resolve: (token) => {
-            originalRequest.headers.set('Authorization', `Bearer ${token}`);
-            resolve(apiClient(originalRequest));
-          },
-          reject,
-        });
-      });
-    }
-
-    isRefreshing = true;
     try {
-      const newAccessToken = await performRefresh();
-      resolveQueue(newAccessToken);
+      const newAccessToken = await ensureFreshAccessToken();
       originalRequest.headers.set('Authorization', `Bearer ${newAccessToken}`);
       return apiClient(originalRequest);
     } catch (refreshError) {
-      rejectQueue(refreshError);
       clearAllTokens();
       onUnauthorized?.();
       return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false;
     }
   },
 );
 
-// --- Logout (baru — v1.1, API Spec §3.1 POST /auth/logout) -----------------
-// Mencabut refreshToken di server. Best-effort: kalau request gagal (mis. offline),
-// sesi lokal tetap dibersihkan oleh pemanggil (lihat AuthContext.logout()).
 export async function revokeSession(allDevices = false): Promise<void> {
-  const refreshToken = getStoredRefreshToken();
+  const refreshToken = getRefreshToken();
   if (!refreshToken) return;
   const body: LogoutRequest = { refreshToken, allDevices };
   await apiClient.post('/auth/logout', body);

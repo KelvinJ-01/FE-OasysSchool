@@ -11,13 +11,11 @@ export interface LoginRequest {
 export interface LoginResponse {
   accessToken: string;
   expiresIn: number;
-  refreshToken: string; // baru — v1.1
-  refreshExpiresIn: number; // baru — v1.1, detik (rekomendasi 30 hari = 2592000)
+  refreshToken: string;
+  refreshExpiresIn: number;
   role: UserRole;
   schoolId: string | null;
 }
-
-// --- Refresh Token (baru — v1.1, API Spec §3.1 & §6.1) --------------------
 
 export interface RefreshTokenRequest {
   refreshToken: string;
@@ -27,7 +25,7 @@ export interface RefreshTokenRequest {
 export interface RefreshTokenResponse {
   accessToken: string;
   expiresIn: number;
-  refreshToken: string; // token baru hasil rotasi — WAJIB menggantikan yang lama
+  refreshToken: string;
   refreshExpiresIn: number;
 }
 
@@ -35,8 +33,6 @@ export interface LogoutRequest {
   refreshToken: string;
   allDevices?: boolean;
 }
-
-// --- Reset Kata Sandi (API Spec §3.1b, FR-13) -------------------------------
 
 export interface PasswordResetRequest {
   email: string;
@@ -58,15 +54,13 @@ export interface PasswordResetConfirmRequest {
   newPassword: string;
 }
 
-// --- Verifikasi Email Registrasi Orang Tua (API Spec §3.1, FR-1) -----------
-
 export interface VerifyEmailRequest {
   email: string;
   otp: string;
 }
 
 export interface VerifyEmailResponse {
-  accountStatus: 'active';
+  accountStatus: 'active' | 'pending_verification';
   message: string;
 }
 
@@ -78,51 +72,17 @@ export interface MessageResponse {
   message: string;
 }
 
-// --- Kebijakan Privasi (baru — v1.3, API Spec §3.1a) -----------------------
+export interface PrivacyPolicySection {
+  heading: string;
+  body: string;
+  items: string[];
+}
 
 export interface PrivacyPolicyResponse {
   version: string;
   effectiveDate: string;
-  content: string;
-  updatedAt: string;
-}
-
-// --- Lupa Kata Sandi (API Spec §3.1b, FR-13) --------------------------------
-
-export interface PasswordResetRequest {
-  email: string;
-  platform: Platform;
-}
-
-export interface PasswordResetVerifyRequest {
-  email: string;
-  otp: string;
-}
-
-export interface PasswordResetVerifyResponse {
-  resetToken: string;
-  expiresIn: number;
-}
-
-export interface PasswordResetConfirmRequest {
-  resetToken: string;
-  newPassword: string;
-}
-
-// --- Verifikasi Email Registrasi Orang Tua (API Spec §3.1, FR-1) -----------
-
-export interface VerifyEmailRequest {
-  email: string;
-  otp: string;
-}
-
-export interface VerifyEmailResponse {
-  accountStatus: 'active';
-  message: string;
-}
-
-export interface ResendOtpRequest {
-  email: string;
+  intro: string;
+  sections: PrivacyPolicySection[];
 }
 
 export interface ParentRegistrationConsent {
@@ -136,6 +96,7 @@ export interface ParentRegistrationRequest {
   phone?: string;
   password: string;
   studentNisn: string;
+  channel: Platform;
   consent: ParentRegistrationConsent;
 }
 
@@ -159,8 +120,9 @@ export interface JwtPayload {
   sub: string;
   role: UserRole;
   schoolId: string | null;
-  fullName: string; // baru — v1.5
-  photoUrl?: string | null; // baru — v1.9
+  fullName: string;
+  photoUrl?: string | null;
+  email?: string;
   platform?: Platform;
   exp: number;
   iat?: number;
@@ -174,8 +136,6 @@ export interface AuthUser {
   photoUrl?: string | null;
   email?: string;
 }
-
-// --- Ringkasan Dasbor (baru — v1.4, API Spec §3.10) -------------------------
 
 export interface AttendanceCounts {
   hadir: number;

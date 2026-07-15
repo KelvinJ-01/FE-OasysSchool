@@ -17,6 +17,7 @@ export interface UploadPhotoResponse {
 
 export interface UpdateProfileRequest {
   fullName?: string;
+  email?: string;
   phone?: string | null;
 }
 

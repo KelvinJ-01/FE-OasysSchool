@@ -163,6 +163,9 @@ function AcademicTermFormModal({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!/^\d{4}\/\d{4}$/.test(yearLabel.trim())) { setError('Tahun ajaran wajib berformat 2025/2026.'); return; }
+    if (!startDate || !endDate) { setError('Tanggal mulai dan selesai wajib diisi.'); return; }
+    if (endDate <= startDate) { setError('Tanggal selesai harus setelah tanggal mulai.'); return; }
     setIsSubmitting(true);
     try {
       if (isEdit && term) {
@@ -183,13 +186,13 @@ function AcademicTermFormModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="m-4 max-w-md">
       <div className="p-6">
-        <h3 className="mb-5 text-theme-sm font-semibold text-gray-800 dark:text-white/90">
+        <h3 className="mb-5 pr-10 text-theme-sm font-semibold text-gray-800 dark:text-white/90">
           {isEdit ? 'Ubah Tahun Ajaran' : 'Tambah Tahun Ajaran'}
         </h3>
         {error && <div role="alert" className="mb-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
-            <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Label Tahun</label>
+            <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Label Tahun<span aria-hidden="true" className="text-error-500"> *</span></label>
             <input
               type="text"
               required
@@ -200,7 +203,7 @@ function AcademicTermFormModal({
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Semester</label>
+            <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Semester<span aria-hidden="true" className="text-error-500"> *</span></label>
             <select
               value={semester}
               onChange={(e) => setSemester(e.target.value as Semester)}
@@ -212,11 +215,11 @@ function AcademicTermFormModal({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Mulai</label>
+              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Mulai<span aria-hidden="true" className="text-error-500"> *</span></label>
               <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-[14px] text-gray-900 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
             </div>
             <div>
-              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Selesai</label>
+              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Selesai<span aria-hidden="true" className="text-error-500"> *</span></label>
               <input type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-[14px] text-gray-900 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
             </div>
           </div>

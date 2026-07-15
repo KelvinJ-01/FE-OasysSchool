@@ -2,13 +2,16 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { CircleCheck, Clock, CircleX, Camera, Trash2 } from 'lucide-react';
 import { apiClient, getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '../../lib/apiClient';
 import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../hooks/useAuth';
+import { toTitleCase, validatePersonName } from '../../lib/format';
 import { Avatar } from '../common/Avatar';
+import { OtpConfirmModal } from '../common/OtpConfirmModal';
 import { Skeleton } from '../common/Skeleton';
 import { Spinner } from '../common/Spinner';
 import type { UserProfileResponse, UpdateProfileRequest, UploadPhotoResponse } from '../../types/profile';
 import type { AccountStatus, UserRole } from '../../types/entities';
 
-const MAX_PHOTO_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB, sesuai API Spec §3.11
+const MAX_PHOTO_SIZE_BYTES = 2 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const ROLE_LABEL: Record<UserRole, string> = {
@@ -26,13 +29,16 @@ const STATUS_BADGE: Record<AccountStatus, { label: string; className: string; ic
 
 interface FieldErrors {
   fullName?: string;
+  email?: string;
   phone?: string;
 }
 
 export function ProfileInfoCard() {
   const { toast } = useToast();
+  const { updateUser } = useAuth();
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
   const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -47,6 +53,7 @@ export function ProfileInfoCard() {
       .then((res) => {
         setProfile(res.data);
         setFullName(res.data.fullName);
+        setEmail(res.data.email);
         setPhone(res.data.phone ?? '');
       })
       .catch((err) => setLoadError(getApiErrorMessage(err, 'Gagal memuat profil.')))
@@ -55,7 +62,7 @@ export function ProfileInfoCard() {
 
   async function handlePhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    e.target.value = ''; // supaya bisa pilih file yang sama lagi kalau perlu
+    e.target.value = '';
     if (!file || !profile) return;
 
     if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
@@ -75,6 +82,7 @@ export function ProfileInfoCard() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setProfile((prev) => (prev ? { ...prev, photoUrl: data.photoUrl } : prev));
+      updateUser({ photoUrl: data.photoUrl });
       toast.success('Foto profil berhasil diperbarui.');
     } catch (err) {
       const code = getApiErrorCode(err);
@@ -96,6 +104,7 @@ export function ProfileInfoCard() {
     try {
       await apiClient.delete('/users/me/photo');
       setProfile((prev) => (prev ? { ...prev, photoUrl: null } : prev));
+      updateUser({ photoUrl: null });
       toast.success('Foto profil dihapus.');
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'Gagal menghapus foto.'));
@@ -104,26 +113,49 @@ export function ProfileInfoCard() {
     }
   }
 
-  const isDirty = profile ? fullName.trim() !== profile.fullName || phone.trim() !== (profile.phone ?? '') : false;
+  const isDirty = profile
+    ? fullName.trim() !== profile.fullName || email.trim() !== profile.email || phone.trim() !== (profile.phone ?? '')
+    : false;
+
+  const [isOtpOpen, setIsOtpOpen] = useState(false);
+  const [pendingNewEmail, setPendingNewEmail] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    if (fullName.trim().length < 3) {
-      setFieldErrors({ fullName: 'Nama lengkap minimal 3 karakter.' });
+    const errors: FieldErrors = {};
+    const cleanedName = fullName.replace(/\s+/g, ' ').trim();
+    const nameError = validatePersonName(cleanedName);
+    if (nameError) errors.fullName = nameError;
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) errors.email = 'Format email tidak valid.';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
     setFieldErrors({});
     setIsSaving(true);
 
     try {
-      const payload: UpdateProfileRequest = { fullName: fullName.trim(), phone: phone.trim() || null };
+      const normalizedName = toTitleCase(cleanedName);
+      const payload: UpdateProfileRequest = { fullName: normalizedName, phone: phone.trim() || null };
       const { data } = await apiClient.patch<UserProfileResponse>('/users/me', payload);
-      setProfile(data);
-      toast.success('Profil berhasil disimpan.');
+      setProfile((prev) => (prev ? { ...data, email: prev.email } : data));
+      setFullName(normalizedName);
+      updateUser({ fullName: normalizedName });
+
+      const newEmail = email.trim().toLowerCase();
+      if (profile && newEmail !== profile.email) {
+        await apiClient.post('/users/me/email/change-request', { newEmail });
+        setPendingNewEmail(newEmail);
+        setIsOtpOpen(true);
+      } else {
+        toast.success('Profil berhasil disimpan.');
+      }
     } catch (err) {
       const code = getApiErrorCode(err);
-      if (code === 'VALIDATION_ERROR') {
+      if (code === 'EMAIL_ALREADY_EXISTS') {
+        setFieldErrors({ email: 'Email ini sudah digunakan akun lain.' });
+      } else if (code === 'VALIDATION_ERROR') {
         const details = getApiErrorDetails(err);
         const mapped: FieldErrors = {};
         for (const d of details) {
@@ -155,7 +187,7 @@ export function ProfileInfoCard() {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-theme-sm font-semibold text-gray-800 dark:text-white/90">Informasi Profil</h3>
+        <h3 className="pr-10 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Informasi Profil</h3>
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-theme-xs font-medium ${badge.className}`}>
           {badge.icon}
           {badge.label}
@@ -205,7 +237,7 @@ export function ProfileInfoCard() {
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <label htmlFor="fullName" className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">
-              Nama Lengkap
+              Nama Lengkap<span aria-hidden="true" className="text-error-500"> *</span>
             </label>
             <input
               id="fullName"
@@ -235,8 +267,18 @@ export function ProfileInfoCard() {
           </div>
 
           <div>
-            <span className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Email</span>
-            <p className="flex h-11 items-center text-[14px] text-gray-500 dark:text-gray-400">{profile.email}</p>
+            <label htmlFor="email" className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">
+              Email<span aria-hidden="true" className="text-error-500"> *</span>
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              className="h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 text-[14px] text-gray-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            />
+            {fieldErrors.email && <p className="mt-1.5 text-[12.5px] text-error-600">{fieldErrors.email}</p>}
           </div>
 
           <div>
@@ -247,7 +289,9 @@ export function ProfileInfoCard() {
 
         <div className="flex items-center justify-between border-t border-gray-100 pt-5 dark:border-gray-800">
           <p className="text-theme-xs text-gray-400">
-            Bergabung sejak {new Date(profile.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+            {profile.createdAt && !Number.isNaN(new Date(profile.createdAt).getTime())
+              ? `Bergabung sejak ${new Date(profile.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+              : ''}
           </p>
           <button
             type="submit"
@@ -265,6 +309,27 @@ export function ProfileInfoCard() {
           </button>
         </div>
       </form>
+
+      <OtpConfirmModal
+        isOpen={isOtpOpen}
+        onClose={() => { setIsOtpOpen(false); setPendingNewEmail(null); if (profile) setEmail(profile.email); }}
+        email={profile?.email ?? ''}
+        confirmEndpoint="/users/me/email/confirm"
+        resendEndpoint="/users/me/email/change-request"
+        resendBody={{ newEmail: pendingNewEmail }}
+        title="Verifikasi Perubahan Email"
+        description={`Demi keamanan, kami mengirim kode 6 digit ke email lama Anda (${profile?.email}). Masukkan kode itu untuk mengganti email menjadi ${pendingNewEmail ?? ''}.`}
+        onConfirmed={(message) => {
+          setIsOtpOpen(false);
+          if (pendingNewEmail) {
+            setProfile((prev) => (prev ? { ...prev, email: pendingNewEmail } : prev));
+            setEmail(pendingNewEmail);
+            updateUser({ email: pendingNewEmail });
+          }
+          setPendingNewEmail(null);
+          toast.success(message);
+        }}
+      />
     </div>
   );
 }

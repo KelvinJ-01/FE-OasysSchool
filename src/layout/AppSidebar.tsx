@@ -1,13 +1,16 @@
 import { useCallback } from "react";
 import { Link, useLocation } from "react-router";
-import { LayoutDashboard, PieChart, Calendar, User, Database, ClipboardCheck, HandCoins } from "lucide-react";
+import { LayoutDashboard, Calendar, User, Database, ClipboardCheck, HandCoins } from "lucide-react";
 
 import { useSidebar } from "../context/SidebarContext";
+import { useAuth } from "../hooks/useAuth";
+import type { UserRole } from "../types/entities";
 
 type NavItem = {
   name: string;
   icon: React.ReactNode;
   path: string;
+  roles?: UserRole[];
 };
 
 const navItems: NavItem[] = [
@@ -15,13 +18,13 @@ const navItems: NavItem[] = [
   { icon: <Database />, name: "Data Master", path: "/data-master" },
   { icon: <Calendar />, name: "Jadwal Pembelajaran", path: "/schedules" },
   { icon: <ClipboardCheck />, name: "Presensi", path: "/attendance" },
-  { icon: <PieChart />, name: "Laporan Presensi", path: "/reports" },
   { icon: <HandCoins />, name: "Donasi", path: "/donations" },
   { icon: <User />, name: "Profil Saya", path: "/profile" },
 ];
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { user } = useAuth();
   const location = useLocation();
 
   const isActive = useCallback(
@@ -30,6 +33,10 @@ const AppSidebar: React.FC = () => {
   );
 
   const showLabel = isExpanded || isHovered || isMobileOpen;
+
+  const visibleItems = navItems.filter(
+    (item) => !item.roles || (user ? item.roles.includes(user.role) : false)
+  );
 
   return (
     <aside
@@ -58,7 +65,7 @@ const AppSidebar: React.FC = () => {
           </h2>
 
           <ul className="flex flex-col gap-4">
-            {navItems.map((nav) => (
+            {visibleItems.map((nav) => (
               <li key={nav.path}>
                 <Link
                   to={nav.path}

@@ -1,7 +1,15 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { History, CircleCheck, Thermometer, FileText, CircleX } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Pencil, History, CircleCheck, Thermometer, FileText, CircleX } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../hooks/useAuth';
+import { getAllClasses } from '../../services/classesService';
+import { getAllSubjects } from '../../services/subjectsService';
+import { env } from '../../config/env';
 import { Spinner } from '../../components/common/Spinner';
+import { DatePicker } from '../../components/common/DatePicker';
+import { todayIso } from '../../lib/dateUtils';
+import { Download } from 'lucide-react';
+import { ReportsExportFilter } from '../../components/reports/ReportsExportFilter';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { Skeleton } from '../../components/common/Skeleton';
@@ -14,6 +22,13 @@ import type { AttendanceRecord, AttendanceStatus, ClassEntity, Schedule, Student
 import type { UserDirectoryEntry } from '../../types/dataMaster';
 import type { UpdateAttendanceStatusRequest, AttendanceHistoryResponse } from '../../types/attendance';
 
+const ROLE_LABEL: Record<string, string> = {
+  administrator: 'Administrator',
+  teacher: 'Guru',
+  parent: 'Orang Tua',
+  developer: 'Tim Pengembang',
+};
+
 const STATUS_META: Record<AttendanceStatus, { label: string; className: string; icon: React.ReactNode }> = {
   hadir: { label: 'Hadir', className: 'bg-secondary-50 text-secondary-700', icon: <CircleCheck size={13} aria-hidden="true" /> },
   sakit: { label: 'Sakit', className: 'bg-warning-50 text-warning-700', icon: <Thermometer size={13} aria-hidden="true" /> },
@@ -23,16 +38,15 @@ const STATUS_META: Record<AttendanceStatus, { label: string; className: string; 
 
 const PAGE_SIZE = 20;
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export default function AttendanceRecordsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const [classes, setClasses] = useState<ClassEntity[]>([]);
   const [classId, setClassId] = useState('');
+  const [subjectId, setSubjectId] = useState('');
   const [sessionDate, setSessionDate] = useState(todayIso());
+  const { isOpen: isExportOpen, openModal: openExportModal, closeModal: closeExportModal } = useModal();
   const [statusFilter, setStatusFilter] = useState('');
 
   const [students, setStudents] = useState<Student[]>([]);
@@ -51,16 +65,33 @@ export default function AttendanceRecordsPage() {
   const { isOpen: isHistoryOpen, openModal: openHistoryModal, closeModal: closeHistoryModal } = useModal();
   const [activeRecord, setActiveRecord] = useState<AttendanceRecord | null>(null);
 
-  useEffect(() => {
-    apiClient.get<PaginatedResponse<ClassEntity>>('/classes', { params: { pageSize: 100 } })
-      .then((res) => setClasses(res.data.items)).catch(() => setClasses([]));
-    apiClient.get<PaginatedResponse<Subject>>('/subjects', { params: { pageSize: 100 } })
-      .then((res) => setSubjects(res.data.items)).catch(() => setSubjects([]));
-    apiClient.get<PaginatedResponse<UserDirectoryEntry>>('/users', { params: { role: 'teacher', pageSize: 100 } })
-      .then((res) => setTeachers(res.data.items)).catch(() => setTeachers([]));
-    apiClient.get<PaginatedResponse<UserDirectoryEntry>>('/users', { params: { role: 'administrator', pageSize: 100 } })
-      .then((res) => setAdministrators(res.data.items)).catch(() => setAdministrators([]));
+  const loadFilters = useCallback(() => {
+    getAllClasses()
+      .then((items) => setClasses(items)).catch(() => setClasses([]));
+    getAllSubjects()
+      .then((items) => setSubjects(items)).catch(() => setSubjects([]));
   }, []);
+
+  useEffect(() => {
+    loadFilters();
+
+    if (user?.role === 'administrator') {
+      apiClient.get<PaginatedResponse<UserDirectoryEntry>>('/users', { params: { role: 'teacher', pageSize: env.maxPageSize } })
+        .then((res) => setTeachers(res.data.items)).catch(() => setTeachers([]));
+      apiClient.get<PaginatedResponse<UserDirectoryEntry>>('/users', { params: { role: 'administrator', pageSize: env.maxPageSize } })
+        .then((res) => setAdministrators(res.data.items)).catch(() => setAdministrators([]));
+    }
+  }, [user?.role, loadFilters]);
+
+  useEffect(() => {
+    function onFocus() { loadFilters(); }
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, [loadFilters]);
 
   useEffect(() => {
     if (!classId) {
@@ -68,9 +99,9 @@ export default function AttendanceRecordsPage() {
       setSchedules([]);
       return;
     }
-    apiClient.get<PaginatedResponse<Student>>('/students', { params: { classId, pageSize: 100 } })
+    apiClient.get<PaginatedResponse<Student>>('/students', { params: { classId, pageSize: env.maxPageSize } })
       .then((res) => setStudents(res.data.items)).catch(() => setStudents([]));
-    apiClient.get<PaginatedResponse<Schedule>>('/schedules', { params: { classId, pageSize: 100 } })
+    apiClient.get<PaginatedResponse<Schedule>>('/schedules', { params: { classId, pageSize: env.maxPageSize } })
       .then((res) => setSchedules(res.data.items)).catch(() => setSchedules([]));
   }, [classId]);
 
@@ -83,6 +114,7 @@ export default function AttendanceRecordsPage() {
         params: {
           classId,
           sessionDate,
+          subjectId: subjectId || undefined,
           status: statusFilter || undefined,
           page: pageNumber,
           pageSize: PAGE_SIZE,
@@ -96,11 +128,12 @@ export default function AttendanceRecordsPage() {
       .finally(() => setIsLoading(false));
   }
 
-  useEffect(load, [classId, sessionDate, statusFilter, pageNumber]);
+  useEffect(load, [classId, sessionDate, subjectId, statusFilter, pageNumber]);
 
   const studentById = useMemo(() => Object.fromEntries(students.map((s) => [s.id, s])), [students]);
   const scheduleById = useMemo(() => Object.fromEntries(schedules.map((s) => [s.id, s])), [schedules]);
   const subjectNameById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s.name])), [subjects]);
+
   const staffNameById = useMemo(
     () => Object.fromEntries([...teachers, ...administrators].map((t) => [t.id, t.fullName])),
     [teachers, administrators],
@@ -145,12 +178,24 @@ export default function AttendanceRecordsPage() {
       header: '',
       className: 'text-right',
       render: (r) => (
-        <div className="flex justify-end gap-3">
-          <button type="button" onClick={() => openHistory(r)} aria-label="Lihat riwayat" className="text-gray-400 hover:text-brand-500">
+        <div className="flex justify-end gap-1">
+          <button
+            type="button"
+            onClick={() => openHistory(r)}
+            aria-label="Lihat riwayat perubahan"
+            title="Riwayat"
+            className="flex size-8 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/5 dark:hover:text-gray-200"
+          >
             <History size={16} aria-hidden="true" />
           </button>
-          <button type="button" onClick={() => openCorrect(r)} className="text-theme-xs font-medium text-brand-500 hover:underline">
-            Koreksi
+          <button
+            type="button"
+            onClick={() => openCorrect(r)}
+            aria-label="Koreksi status"
+            title="Koreksi"
+            className="flex size-8 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/10"
+          >
+            <Pencil size={16} aria-hidden="true" />
           </button>
         </div>
       ),
@@ -164,18 +209,28 @@ export default function AttendanceRecordsPage() {
       <PageMeta title="Presensi | Oasys School" description="Lihat dan koreksi presensi siswa" />
       <PageBreadCrumb pageTitle="Presensi" />
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <select value={classId} onChange={(e) => { setClassId(e.target.value); setPageNumber(1); }} className={selectClass}>
           <option value="">Pilih kelas...</option>
           {classes.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
-        <input
-          type="date"
-          value={sessionDate}
-          onChange={(e) => { setSessionDate(e.target.value); setPageNumber(1); }}
+        <select
+          value={subjectId}
+          onChange={(e) => { setSubjectId(e.target.value); setPageNumber(1); }}
+          aria-label="Filter mata pelajaran"
           className={selectClass}
+        >
+          <option value="">Semua Mata Pelajaran</option>
+          {subjects.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+        </select>
+        <DatePicker
+          value={sessionDate}
+          onChange={(v) => { setSessionDate(v); setPageNumber(1); }}
+          ariaLabel="Filter tanggal presensi"
         />
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPageNumber(1); }} className={selectClass}>
           <option value="">Semua Status</option>
@@ -183,7 +238,23 @@ export default function AttendanceRecordsPage() {
             <option key={s} value={s}>{STATUS_META[s].label}</option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={openExportModal}
+          className="ml-auto flex h-10 items-center gap-1.5 rounded-md border border-gray-300 bg-white px-4 text-theme-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5"
+        >
+          <Download size={16} aria-hidden="true" />
+          Ekspor Laporan
+        </button>
       </div>
+
+      <Modal isOpen={isExportOpen} onClose={closeExportModal} className="m-4 max-w-xl">
+        <div className="max-h-[85vh] overflow-y-auto p-6">
+          <h3 className="mb-1 pr-10 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Ekspor Laporan Presensi</h3>
+          <p className="mb-4 text-[13px] text-gray-500 dark:text-gray-400">Unduh rekap presensi dalam format Excel atau CSV.</p>
+          <ReportsExportFilter />
+        </div>
+      </Modal>
 
       {!classId && (
         <div className="rounded-xl border border-gray-200 bg-gray-50 px-5 py-10 text-center text-theme-sm text-gray-400 dark:border-gray-800 dark:bg-white/[0.02]">
@@ -256,8 +327,7 @@ function CorrectStatusModal({
 
   useEffect(() => {
     if (isOpen) {
-      const fallback = (Object.keys(STATUS_META) as AttendanceStatus[]).find((s) => s !== record.status);
-      setStatus(fallback ?? 'hadir');
+      setStatus(record.status);
     }
   }, [isOpen, record]);
 
@@ -265,7 +335,7 @@ function CorrectStatusModal({
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const payload: UpdateAttendanceStatusRequest = { status };
+      const payload: UpdateAttendanceStatusRequest = { status, previousStatus: record.status };
       await apiClient.patch(`/attendance-records/${record.id}/status`, payload);
       onSaved();
     } catch (err) {
@@ -279,7 +349,7 @@ function CorrectStatusModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="m-4 max-w-sm">
       <div className="p-6">
-        <h3 className="mb-2 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Koreksi Status Presensi</h3>
+        <h3 className="mb-2 pr-10 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Koreksi Status Presensi</h3>
         <p className="mb-5 text-[13px] text-gray-500 dark:text-gray-400">
           Mengubah status kehadiran <span className="font-medium text-gray-700 dark:text-gray-300">{studentName}</span>{' '}
           (saat ini: <span className="font-medium">{STATUS_META[record.status].label}</span>).
@@ -299,7 +369,7 @@ function CorrectStatusModal({
 
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="h-10 rounded-md px-4 text-theme-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5">Batal</button>
-            <button type="submit" disabled={isSubmitting} className="h-10 rounded-md bg-brand-500 px-5 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60">
+            <button type="submit" disabled={isSubmitting || status === record.status} className="h-10 rounded-md bg-brand-500 px-5 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60">
               {isSubmitting ? (
                 <>
                   <Spinner size="sm" className="mr-2" />
@@ -366,7 +436,10 @@ function HistoryModal({
                   <span className="font-medium">{STATUS_META[h.newStatus].label}</span>
                 </p>
                 <p className="mt-0.5 text-theme-xs text-gray-400">
-                  {staffNameById[h.changedBy] ?? 'Staf sekolah'} · {new Date(h.changedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                  {h.changedByName ?? staffNameById[h.changedBy] ?? 'Staf sekolah'}
+                  {h.changedByRole ? ` (${ROLE_LABEL[h.changedByRole] ?? h.changedByRole})` : ''}
+                  {' · '}
+                  {new Date(h.changedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
                 </p>
               </li>
             ))}

@@ -16,6 +16,7 @@ export function CopyField({ label, value, variant = 'light' }: CopyFieldProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
+      setCopied(false);
     }
   }
 

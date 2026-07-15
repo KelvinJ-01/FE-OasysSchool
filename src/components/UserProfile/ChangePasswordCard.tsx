@@ -3,6 +3,7 @@ import { Lock, Eye, EyeOff } from 'lucide-react';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
 import { useToast } from '../../hooks/useToast';
 import { Spinner } from '../common/Spinner';
+import { OtpConfirmModal } from '../common/OtpConfirmModal';
 import type { ChangePasswordRequest } from '../../types/profile';
 import type { MessageResponse } from '../../types/auth';
 
@@ -39,6 +40,8 @@ export function ChangePasswordCard() {
     return Object.keys(next).length === 0;
   }
 
+  const [isOtpOpen, setIsOtpOpen] = useState(false);
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!validate()) return;
@@ -46,14 +49,13 @@ export function ChangePasswordCard() {
     setIsSubmitting(true);
     try {
       const payload: ChangePasswordRequest = { currentPassword: values.currentPassword, newPassword: values.newPassword };
-      await apiClient.patch<MessageResponse>('/users/me/password', payload);
-      toast.success('Kata sandi berhasil diubah. Sesi di perangkat lain telah diakhiri demi keamanan.');
-      setValues(EMPTY_VALUES);
+      await apiClient.post<MessageResponse>('/users/me/password/change-request', payload);
+      setIsOtpOpen(true);
     } catch (err) {
       const code = getApiErrorCode(err);
-      if (code === 'CURRENT_PASSWORD_INVALID') {
+      if (code === 'CURRENT_PASSWORD_INVALID' || code === 'INVALID_CURRENT_PASSWORD') {
         setErrors({ currentPassword: 'Kata sandi saat ini tidak cocok.' });
-      } else if (code === 'PASSWORD_POLICY_VIOLATION') {
+      } else if (code === 'PASSWORD_POLICY_VIOLATION' || code === 'VALIDATION_ERROR') {
         setErrors({ newPassword: 'Kata sandi baru belum memenuhi kebijakan keamanan yang berlaku.' });
       } else {
         toast.error(getApiErrorMessage(err, 'Gagal mengubah kata sandi.'));
@@ -73,7 +75,7 @@ export function ChangePasswordCard() {
     return (
       <div>
         <label htmlFor={id} className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">
-          {label}
+          {label}<span aria-hidden="true" className="text-error-500"> *</span>
         </label>
         <div className="relative">
           <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-gray-400">
@@ -105,7 +107,7 @@ export function ChangePasswordCard() {
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
-      <h3 className="mb-5 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Ganti Kata Sandi</h3>
+      <h3 className="mb-5 pr-10 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Ganti Kata Sandi</h3>
 
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         {field('currentPassword', 'Kata Sandi Saat Ini', 'current', 'current-password')}
@@ -129,6 +131,19 @@ export function ChangePasswordCard() {
           </button>
         </div>
       </form>
+      <OtpConfirmModal
+        isOpen={isOtpOpen}
+        onClose={() => setIsOtpOpen(false)}
+        email=""
+        confirmEndpoint="/users/me/password/confirm"
+        title="Verifikasi Perubahan Kata Sandi"
+        description="Demi keamanan, kami mengirim kode 6 digit ke email Anda. Masukkan kode itu untuk menerapkan kata sandi baru."
+        onConfirmed={(message) => {
+          setIsOtpOpen(false);
+          setValues(EMPTY_VALUES);
+          toast.success(message);
+        }}
+      />
     </div>
   );
 }

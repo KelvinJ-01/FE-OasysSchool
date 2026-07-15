@@ -1,0 +1,16 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000/api/v1}
+        VITE_APP_NAME: ${VITE_APP_NAME:-Oasys School Dashboard}
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-0.1.0}
+        VITE_ENABLE_PARENT_REGISTRATION_PAGE: ${VITE_ENABLE_PARENT_REGISTRATION_PAGE:-true}
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+    image: oasys-school-dashboard:latest
+    container_name: oasys-dashboard
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    restart: unless-stopped

@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
 import { useAuth } from '../../hooks/useAuth';
+import { getAllClasses } from '../../services/classesService';
+import { getAllSubjects } from '../../services/subjectsService';
+import { env } from '../../config/env';
 import { Spinner } from '../common/Spinner';
 import type { PaginatedResponse } from '../../types/api';
-import type { ClassEntity, AcademicTerm } from '../../types/entities';
+import type { ClassEntity, AcademicTerm, Subject } from '../../types/entities';
 
 type ExportFormat = 'csv' | 'xlsx';
 
@@ -19,6 +22,8 @@ export function ReportsExportFilter() {
 
   const [classes, setClasses] = useState<ClassEntity[]>([]);
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subjectId, setSubjectId] = useState<string>('');
   const [classId, setClassId] = useState<string>('');
   const [academicTermId, setAcademicTermId] = useState<string>('');
   const [format, setFormat] = useState<ExportFormat>('xlsx');
@@ -26,14 +31,18 @@ export function ReportsExportFilter() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    apiClient.get<PaginatedResponse<ClassEntity>>('/classes', { params: { pageSize: 100 } })
-      .then((res) => setClasses(res.data.items))
+    getAllClasses()
+      .then((items) => setClasses(items))
       .catch(() => setClasses([]));
 
-    apiClient.get<PaginatedResponse<AcademicTerm>>('/academic-terms', { params: { pageSize: 100 } })
+    apiClient.get<PaginatedResponse<AcademicTerm>>('/academic-terms', { params: { pageSize: env.maxPageSize } })
       .then((res) => setTerms(res.data.items))
       .catch(() => setTerms([]));
-  }, []);
+
+    getAllSubjects()
+      .then((items) => setSubjects(items))
+      .catch(() => setSubjects([]));
+  }, [user?.role]);
 
   const isClassRequired = isTeacher;
   const canSubmit = useMemo(() => {
@@ -51,6 +60,7 @@ export function ReportsExportFilter() {
           academicTermId,
           format,
           ...(classId ? { classId } : {}),
+          ...(subjectId ? { subjectId } : {}),
         },
         responseType: 'blob',
       });
@@ -120,6 +130,24 @@ export function ReportsExportFilter() {
           <option value="">{isClassRequired ? 'Pilih kelas yang Anda ampu...' : 'Seluruh sekolah'}</option>
           {classes.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90" htmlFor="subjectId">
+          Mata Pelajaran{' '}
+          <span className="text-theme-xs font-normal text-gray-400">(opsional — kosongkan untuk semua mapel)</span>
+        </label>
+        <select
+          id="subjectId"
+          className={selectClass}
+          value={subjectId}
+          onChange={(e) => setSubjectId(e.target.value)}
+        >
+          <option value="">Semua Mata Pelajaran</option>
+          {subjects.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
       </div>

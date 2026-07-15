@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { DatePicker } from '../../components/common/DatePicker';
+import { todayIso, dayOfWeekFromIso, dayName, formatDayAndDate, nextDateForDayOfWeek } from '../../lib/dateUtils';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { Spinner } from '../../components/common/Spinner';
 import { apiClient, getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '../../lib/apiClient';
+import { env } from '../../config/env';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { Modal } from '../../components/ui/modal';
 import { useModal } from '../../hooks/useModal';
@@ -14,7 +17,6 @@ import type { Schedule, ClassEntity, Subject, AcademicTerm } from '../../types/e
 import type { UserDirectoryEntry } from '../../types/dataMaster';
 import type { CreateScheduleRequest, UpdateScheduleRequest } from '../../types/schedule';
 
-const DAY_LABELS = ['', 'Senin', 'Selasa', 'Rabu', 'Kamis', "Jum'at", 'Sabtu', 'Minggu'];
 const PAGE_SIZE = 15;
 
 export default function SchedulesPage() {
@@ -30,7 +32,7 @@ export default function SchedulesPage() {
 
   const [classFilter, setClassFilter] = useState('');
   const [termFilter, setTermFilter] = useState('');
-  const [dayFilter, setDayFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState(todayIso);
   const [pageNumber, setPageNumber] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,13 +42,13 @@ export default function SchedulesPage() {
   const [editing, setEditing] = useState<Schedule | null>(null);
 
   useEffect(() => {
-    apiClient.get<PaginatedResponse<ClassEntity>>('/classes', { params: { pageSize: 100 } })
+    apiClient.get<PaginatedResponse<ClassEntity>>('/classes', { params: { pageSize: env.maxPageSize } })
       .then((res) => setClasses(res.data.items)).catch(() => setClasses([]));
-    apiClient.get<PaginatedResponse<Subject>>('/subjects', { params: { pageSize: 100 } })
+    apiClient.get<PaginatedResponse<Subject>>('/subjects', { params: { pageSize: env.maxPageSize } })
       .then((res) => setSubjects(res.data.items)).catch(() => setSubjects([]));
-    apiClient.get<PaginatedResponse<UserDirectoryEntry>>('/users', { params: { role: 'teacher', pageSize: 100 } })
+    apiClient.get<PaginatedResponse<UserDirectoryEntry>>('/users', { params: { role: 'teacher', pageSize: env.maxPageSize } })
       .then((res) => setTeachers(res.data.items)).catch(() => setTeachers([]));
-    apiClient.get<PaginatedResponse<AcademicTerm>>('/academic-terms', { params: { pageSize: 100 } })
+    apiClient.get<PaginatedResponse<AcademicTerm>>('/academic-terms', { params: { pageSize: env.maxPageSize } })
       .then((res) => {
         setAcademicTerms(res.data.items);
         const active = res.data.items.find((t) => t.isActive);
@@ -65,7 +67,7 @@ export default function SchedulesPage() {
           pageSize: PAGE_SIZE,
           classId: classFilter || undefined,
           academicTermId: termFilter || undefined,
-          dayOfWeek: dayFilter || undefined,
+          dayOfWeek: dayOfWeekFromIso(dateFilter),
         },
       })
       .then((res) => {
@@ -76,7 +78,7 @@ export default function SchedulesPage() {
       .finally(() => setIsLoading(false));
   }
 
-  useEffect(load, [pageNumber, classFilter, termFilter, dayFilter]);
+  useEffect(load, [pageNumber, classFilter, termFilter, dateFilter]);
 
   const classNameById = useMemo(() => Object.fromEntries(classes.map((c) => [c.id, c.name])), [classes]);
   const subjectNameById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s.name])), [subjects]);
@@ -98,7 +100,7 @@ export default function SchedulesPage() {
   }
 
   async function handleDelete(schedule: Schedule) {
-    const label = `${DAY_LABELS[schedule.dayOfWeek]} ${schedule.startTime}–${schedule.endTime} · ${classNameById[schedule.classId] ?? ''}`;
+    const label = `${dayName(schedule.dayOfWeek)} ${schedule.startTime}–${schedule.endTime} · ${classNameById[schedule.classId] ?? ''}`;
     if (!window.confirm(`Hapus jadwal "${label}"? Tindakan ini tidak bisa dibatalkan.`)) return;
     try {
       await apiClient.delete(`/schedules/${schedule.id}`);
@@ -115,11 +117,15 @@ export default function SchedulesPage() {
   }
 
   const columns: Column<Schedule>[] = [
-    { key: 'day', header: 'Hari', render: (s) => DAY_LABELS[s.dayOfWeek] ?? '—' },
+    {
+      key: 'day',
+      header: 'Hari & Tanggal',
+      render: (s) => (dayOfWeekFromIso(dateFilter) === s.dayOfWeek ? formatDayAndDate(dateFilter) : dayName(s.dayOfWeek)),
+    },
     { key: 'time', header: 'Waktu', render: (s) => `${s.startTime}–${s.endTime}` },
     { key: 'class', header: 'Kelas', render: (s) => classNameById[s.classId] ?? '—' },
     { key: 'subject', header: 'Mata Pelajaran', render: (s) => subjectNameById[s.subjectId] ?? '—' },
-    { key: 'teacher', header: 'Guru', render: (s) => teacherNameById[s.teacherId] ?? '—' },
+    { key: 'teacher', header: 'Guru', render: (s) => s.teacherName ?? teacherNameById[s.teacherId] ?? '—' },
     ...(isAdmin
       ? [
           {
@@ -168,16 +174,11 @@ export default function SchedulesPage() {
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
-          <select
-            value={dayFilter}
-            onChange={(e) => { setDayFilter(e.target.value); setPageNumber(1); }}
-            className="h-10 rounded-md border border-gray-300 bg-white px-3 text-theme-sm text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-          >
-            <option value="">Semua Hari</option>
-            {DAY_LABELS.slice(1).map((label, idx) => (
-              <option key={label} value={idx + 1}>{label}</option>
-            ))}
-          </select>
+          <DatePicker
+            value={dateFilter}
+            onChange={(v) => { setDateFilter(v); setPageNumber(1); }}
+            ariaLabel="Filter tanggal jadwal"
+          />
         </div>
 
         {isAdmin && (
@@ -253,7 +254,7 @@ function ScheduleFormModal({
   const [subjectId, setSubjectId] = useState('');
   const [teacherId, setTeacherId] = useState('');
   const [academicTermId, setAcademicTermId] = useState(defaultTermId);
-  const [dayOfWeek, setDayOfWeek] = useState(1);
+  const [sessionDate, setSessionDate] = useState(todayIso());
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -265,7 +266,7 @@ function ScheduleFormModal({
     setSubjectId(schedule?.subjectId ?? '');
     setTeacherId(schedule?.teacherId ?? '');
     setAcademicTermId(schedule?.academicTermId ?? defaultTermId);
-    setDayOfWeek(schedule?.dayOfWeek ?? 1);
+    setSessionDate(schedule ? nextDateForDayOfWeek(schedule.dayOfWeek) : todayIso());
     setStartTime(schedule?.startTime ?? '');
     setEndTime(schedule?.endTime ?? '');
     setConflictError(null);
@@ -275,6 +276,19 @@ function ScheduleFormModal({
     e.preventDefault();
     setConflictError(null);
 
+    if (!classId || !subjectId || !teacherId || !academicTermId) {
+      toast.error('Kelas, mata pelajaran, guru, dan tahun ajaran wajib dipilih.');
+      return;
+    }
+    const dayOfWeek = dayOfWeekFromIso(sessionDate);
+    if (!dayOfWeek) {
+      toast.error('Tanggal wajib dipilih.');
+      return;
+    }
+    if (!startTime || !endTime) {
+      toast.error('Jam mulai dan jam selesai wajib diisi.');
+      return;
+    }
     if (endTime <= startTime) {
       toast.error('Jam selesai harus setelah jam mulai.');
       return;
@@ -312,7 +326,7 @@ function ScheduleFormModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="m-4 max-w-lg">
       <div className="p-6">
-        <h3 className="mb-5 text-theme-sm font-semibold text-gray-800 dark:text-white/90">
+        <h3 className="mb-5 pr-10 text-theme-sm font-semibold text-gray-800 dark:text-white/90">
           {isEdit ? 'Ubah Jadwal' : 'Tambah Jadwal'}
         </h3>
 
@@ -325,7 +339,7 @@ function ScheduleFormModal({
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Tahun Ajaran</label>
+              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Tahun Ajaran<span aria-hidden="true" className="text-error-500"> *</span></label>
               <select required value={academicTermId} onChange={(e) => setAcademicTermId(e.target.value)} className={selectClass}>
                 <option value="">Pilih...</option>
                 {academicTerms.map((t) => (
@@ -334,7 +348,7 @@ function ScheduleFormModal({
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Kelas</label>
+              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Kelas<span aria-hidden="true" className="text-error-500"> *</span></label>
               <select required value={classId} onChange={(e) => setClassId(e.target.value)} className={selectClass}>
                 <option value="">Pilih...</option>
                 {classes.map((c) => (
@@ -346,7 +360,7 @@ function ScheduleFormModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Mata Pelajaran</label>
+              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Mata Pelajaran<span aria-hidden="true" className="text-error-500"> *</span></label>
               <select required value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className={selectClass}>
                 <option value="">Pilih...</option>
                 {subjects.map((s) => (
@@ -355,7 +369,7 @@ function ScheduleFormModal({
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Guru</label>
+              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Guru<span aria-hidden="true" className="text-error-500"> *</span></label>
               <select required value={teacherId} onChange={(e) => setTeacherId(e.target.value)} className={selectClass}>
                 <option value="">Pilih...</option>
                 {teachers.map((t) => (
@@ -366,21 +380,22 @@ function ScheduleFormModal({
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Hari</label>
-            <select required value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))} className={selectClass}>
-              {DAY_LABELS.slice(1).map((label, idx) => (
-                <option key={label} value={idx + 1}>{label}</option>
-              ))}
-            </select>
+            <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Tanggal<span aria-hidden="true" className="text-error-500"> *</span></label>
+            <DatePicker
+              value={sessionDate}
+              onChange={setSessionDate}
+              ariaLabel="Tanggal jadwal"
+              className="w-full"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Jam Mulai</label>
+              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Jam Mulai<span aria-hidden="true" className="text-error-500"> *</span></label>
               <input type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} className={selectClass} />
             </div>
             <div>
-              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Jam Selesai</label>
+              <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Jam Selesai<span aria-hidden="true" className="text-error-500"> *</span></label>
               <input type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className={selectClass} />
             </div>
           </div>

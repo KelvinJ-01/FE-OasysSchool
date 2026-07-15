@@ -45,23 +45,49 @@ export interface UserAccount {
   updatedAt: string;
 }
 
+export type Gender = 'laki_laki' | 'perempuan';
+export type Religion = 'islam' | 'kristen' | 'katolik' | 'hindu' | 'buddha' | 'konghucu';
+
+export interface StudentGuardian {
+  name: string;
+  relation: 'wali';
+  phone?: string | null;
+}
+
 export interface Student {
   id: string;
   schoolId: string;
   classId: string | null;
   nisn: string;
   fullName: string;
+  gender?: Gender | null;
+  religion?: Religion | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  fatherName?: string | null;
+  motherName?: string | null;
+  guardian1?: StudentGuardian | null;
+  guardian2?: StudentGuardian | null;
+  photoUrl?: string | null;
+  qrCode?: string | null;
   status: StudentStatus;
   statusChangedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
+export type EducationLevel = 'sd' | 'smp' | 'sma' | 'smk';
+
 export interface ClassEntity {
   id: string;
   schoolId: string;
   name: string;
+  educationLevel?: EducationLevel | null;
   gradeLevel?: string | null;
+  homeroomTeacherId?: string | null;
+  homeroomTeacherName?: string | null;
+  studentCount?: number;
   createdAt: string;
 }
 
@@ -78,7 +104,10 @@ export interface AcademicTerm {
 export interface Subject {
   id: string;
   schoolId: string;
+  code?: string | null;
   name: string;
+  teacherIds?: string[];
+  teacherNames?: string[];
 }
 
 export interface Schedule {
@@ -92,6 +121,7 @@ export interface Schedule {
   startTime: string;
   endTime: string;
   createdAt: string;
+  teacherName?: string;
 }
 
 export interface AttendanceRecord {
@@ -114,6 +144,8 @@ export interface AttendanceStatusHistoryEntry {
   oldStatus: AttendanceStatus;
   newStatus: AttendanceStatus;
   changedBy: string;
+  changedByName?: string;
+  changedByRole?: UserRole;
   changedAt: string;
 }
 

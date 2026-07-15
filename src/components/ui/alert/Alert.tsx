@@ -1,12 +1,12 @@
 import { Link } from "react-router";
 
 interface AlertProps {
-  variant: "success" | "error" | "warning" | "info"; // Alert type
-  title: string; // Title of the alert
-  message: string; // Message of the alert
-  showLink?: boolean; // Whether to show the "Learn More" link
-  linkHref?: string; // Link URL
-  linkText?: string; // Link text
+  variant: "success" | "error" | "warning" | "info";
+  title: string;
+  message: string;
+  showLink?: boolean;
+  linkHref?: string;
+  linkText?: string;
 }
 
 const Alert: React.FC<AlertProps> = ({
@@ -17,7 +17,6 @@ const Alert: React.FC<AlertProps> = ({
   linkHref = "#",
   linkText = "Learn more",
 }) => {
-  // Tailwind classes for each variant
   const variantClasses = {
     success: {
       container:
@@ -41,7 +40,6 @@ const Alert: React.FC<AlertProps> = ({
     },
   };
 
-  // Icon for each variant
   const icons = {
     success: (
       <svg
