@@ -3,7 +3,9 @@ import { Link, useNavigate } from 'react-router';
 import { apiClient, getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '../../lib/apiClient';
 import { useToast } from '../../hooks/useToast';
 import { env } from '../../config/env';
-import { toTitleCase, validatePersonName } from '../../lib/format';
+import { toTitleCase } from '../../lib/format';
+import { parentSignUpSchema } from '../../lib/schemas';
+import { parseFormData } from '../../lib/validateForm';
 import { Spinner } from '../common/Spinner';
 import type { ParentRegistrationRequest, ParentRegistrationResponse, PrivacyPolicyResponse } from '../../types/auth';
 
@@ -38,17 +40,11 @@ export function SignUpForm() {
   }, []);
 
   function validateClientSide(): FieldErrors {
-    const errors: FieldErrors = {};
-    { const nameErr = validatePersonName(fullName); if (nameErr) errors.fullName = nameErr; }
-    if (!/^\S+@\S+\.\S+$/.test(email)) errors.email = 'Format email tidak valid.';
-    if (password.length < 8) errors.password = 'Kata sandi minimal 8 karakter.';
-
-    if (!/^\d{10}$/.test(studentNisn)) {
-      errors.studentNisn = 'NISN harus terdiri dari 10 digit angka.';
-    }
-
-    if (!consentAccepted) errors.consent = 'Persetujuan wajib dicentang untuk melanjutkan.';
-    return errors;
+    const result = parseFormData(parentSignUpSchema, {
+      fullName, email, phone, password, studentNisn,
+      consent: consentAccepted ? true : undefined,
+    });
+    return result.success ? {} : result.errors;
   }
 
   async function handleSubmit(e: FormEvent) {

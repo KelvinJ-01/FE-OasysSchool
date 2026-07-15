@@ -1,47 +1,39 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { CalendarDays, ArrowRight } from 'lucide-react';
-import { apiClient } from '../../lib/apiClient';
 import { useAuth } from '../../hooks/useAuth';
+import { useSchedulesQuery } from '../../hooks/queries/useSchedules';
+import { useAllClassesQuery, useAllSubjectsQuery } from '../../hooks/queries/useFilters';
 import { Skeleton } from '../common/Skeleton';
-import type { PaginatedResponse } from '../../types/api';
-import type { Schedule, ClassEntity, Subject } from '../../types/entities';
 
 export function TodaySchedule() {
   const { user } = useAuth();
   const isTeacher = user?.role === 'teacher';
-  const [items, setItems] = useState<Array<{ id: string; time: string; subject: string; className: string; teacherName?: string | null }>>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
 
-  useEffect(() => {
-    const jsDay = new Date().getDay();
-    const todayDow = jsDay === 0 ? 7 : jsDay;
+  const jsDay = new Date().getDay();
+  const todayDow = jsDay === 0 ? 7 : jsDay;
 
-    Promise.all([
-      apiClient.get<PaginatedResponse<Schedule>>('/schedules', { params: { pageSize: 100 } }),
-      apiClient.get<PaginatedResponse<ClassEntity>>('/classes', { params: { pageSize: 100 } }),
-      apiClient.get<PaginatedResponse<Subject>>('/subjects', { params: { pageSize: 100 } }),
-    ])
-      .then(([schedRes, classRes, subjRes]) => {
-        const classById = new Map(classRes.data.items.map((c) => [c.id, c.name]));
-        const subjById = new Map(subjRes.data.items.map((s) => [s.id, s.name]));
-        const todays = schedRes.data.items
-          .filter((s) => s.dayOfWeek === todayDow)
-          .filter((s) => (user?.role === 'teacher' ? s.teacherId === user.id : true))
-          .sort((a, b) => a.startTime.localeCompare(b.startTime))
-          .map((s) => ({
-            id: s.id,
-            time: `${s.startTime}–${s.endTime}`,
-            subject: subjById.get(s.subjectId) ?? 'Mata pelajaran',
-            className: classById.get(s.classId) ?? 'Kelas',
-            teacherName: s.teacherName ?? null,
-          }));
-        setItems(todays);
-      })
-      .catch(() => setHasError(true))
-      .finally(() => setIsLoading(false));
-  }, [user]);
+  const schedulesQuery = useSchedulesQuery({ page: 1, pageSize: 100, dayOfWeek: todayDow });
+  const classesQuery = useAllClassesQuery();
+  const subjectsQuery = useAllSubjectsQuery();
+
+  const isLoading = schedulesQuery.isPending || classesQuery.isPending || subjectsQuery.isPending;
+  const hasError = schedulesQuery.isError || classesQuery.isError || subjectsQuery.isError;
+
+  const items = useMemo(() => {
+    const classById = new Map((classesQuery.data ?? []).map((c) => [c.id, c.name]));
+    const subjById = new Map((subjectsQuery.data ?? []).map((s) => [s.id, s.name]));
+    return (schedulesQuery.data?.items ?? [])
+      .filter((s) => (isTeacher && user ? s.teacherId === user.id : true))
+      .sort((a, b) => a.startTime.localeCompare(b.startTime))
+      .map((s) => ({
+        id: s.id,
+        time: `${s.startTime}–${s.endTime}`,
+        subject: subjById.get(s.subjectId) ?? 'Mata pelajaran',
+        className: classById.get(s.classId) ?? 'Kelas',
+        teacherName: s.teacherName ?? null,
+      }));
+  }, [schedulesQuery.data, classesQuery.data, subjectsQuery.data, isTeacher, user]);
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">

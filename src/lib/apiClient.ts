@@ -101,6 +101,14 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    const errorCode = error.response?.data?.error?.code;
+
+    if (errorCode === 'REFRESH_TOKEN_REUSED') {
+      clearAllTokens();
+      onUnauthorized?.();
+      return Promise.reject(error);
+    }
+
     if (status === 401 && isRefreshEndpoint) {
       clearAllTokens();
       onUnauthorized?.();
@@ -138,7 +146,24 @@ export function getApiErrorCode(error: unknown): string | undefined {
 
 export function getApiErrorMessage(error: unknown, fallback = 'Terjadi kesalahan. Coba lagi.'): string {
   const axiosError = error as AxiosError<ApiErrorResponse>;
-  return axiosError.response?.data?.error?.message ?? fallback;
+
+  const apiMessage = axiosError.response?.data?.error?.message;
+  if (apiMessage) return apiMessage;
+
+  if (!axiosError.response) {
+    if (axiosError.code === 'ECONNABORTED' || axiosError.code === 'ETIMEDOUT') {
+      return 'Server terlalu lama merespons. Periksa koneksi Anda lalu coba lagi.';
+    }
+    if (axiosError.request) {
+      return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda, atau hubungi Tim Pengembang bila masalah berlanjut.';
+    }
+  }
+
+  if (axiosError.response && axiosError.response.status >= 500) {
+    return 'Server sedang bermasalah. Coba beberapa saat lagi atau hubungi Tim Pengembang.';
+  }
+
+  return fallback;
 }
 
 export function getApiErrorDetails(error: unknown): ApiErrorDetail[] {

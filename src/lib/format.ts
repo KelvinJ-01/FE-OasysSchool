@@ -25,14 +25,3 @@ export function toSentenceCase(value: string): string {
   return trimmed[0].toUpperCase() + trimmed.slice(1);
 }
 
-export function validatePersonName(value: string): string | null {
-  const name = value.replace(/\s+/g, ' ').trim();
-  if (!name) return 'Nama wajib diisi.';
-  const letterCount = (name.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
-  if (letterCount < 3) return 'Nama lengkap minimal 3 huruf.';
-  if (!/^[A-Za-zÀ-ÿ]/.test(name)) return 'Nama harus diawali huruf, bukan tanda baca atau angka.';
-  if (!/^[A-Za-zÀ-ÿ' .,-]+$/.test(name)) return 'Nama hanya boleh berisi huruf, spasi, titik, koma, apostrof, dan tanda hubung.';
-  if (/[.,'-]{2,}/.test(name.replace(/\s/g, ''))) return 'Tanda baca pada nama tidak boleh berurutan.';
-  if (/[,'-]$/.test(name)) return 'Nama tidak boleh diakhiri tanda baca menggantung.';
-  return null;
-}

@@ -1,17 +1,20 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Plus, Upload } from 'lucide-react';
 import { toTitleCase } from '../../lib/format';
+import { subjectSchema } from '../../lib/schemas';
+import { parseFormData, firstError } from '../../lib/validateForm';
 import { ActionIcons } from '../../components/common/ActionIcons';
 import { ImportModal } from '../../components/common/ImportModal';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { Spinner } from '../../components/common/Spinner';
 import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSubjectsPageQuery, useSubjectMutations } from '../../hooks/queries/useAcademic';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { Modal } from '../../components/ui/modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { useModal } from '../../hooks/useModal';
-import type { PaginatedResponse } from '../../types/api';
 import type { Subject } from '../../types/entities';
 import type { CreateSubjectRequest, UpdateSubjectRequest } from '../../types/dataMaster';
 
@@ -22,47 +25,33 @@ export default function SubjectsPage() {
   const { toast } = useToast();
   const isAdmin = user?.role === 'administrator';
 
-  const [items, setItems] = useState<Subject[]>([]);
+
   const [pageNumber, setPageNumber] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
+  const listQuery = useSubjectsPageQuery({ page: pageNumber, pageSize: PAGE_SIZE });
+  const { remove } = useSubjectMutations();
+  const queryClient = useQueryClient();
+  const items = listQuery.data?.items ?? [];
+  const totalPages = listQuery.data?.totalPages ?? 1;
+  const isLoading = listQuery.isPending;
+  const listError = listQuery.isError ? getApiErrorMessage(listQuery.error, 'Gagal memuat data mata pelajaran.') : null;
   const [pendingDelete, setPendingDelete] = useState<Subject | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const isDeleting = remove.isPending;
 
   const { isOpen, openModal, closeModal } = useModal();
   const { isOpen: isImportOpen, openModal: openImportModal, closeModal: closeImportModal } = useModal();
   const [editing, setEditing] = useState<Subject | null>(null);
 
-  function load() {
-    setIsLoading(true);
-    setListError(null);
-    apiClient
-      .get<PaginatedResponse<Subject>>('/subjects', { params: { page: pageNumber, pageSize: PAGE_SIZE } })
-      .then((res) => {
-        setItems(res.data.items);
-        setTotalPages(res.data.totalPages);
-      })
-      .catch((err) => setListError(getApiErrorMessage(err, 'Gagal memuat data mata pelajaran.')))
-      .finally(() => setIsLoading(false));
-  }
-
-  useEffect(load, [pageNumber]);
 
   async function confirmDelete() {
     if (!pendingDelete) return;
     const subject = pendingDelete;
-    setIsDeleting(true);
     try {
-      await apiClient.delete(`/subjects/${subject.id}`);
+      await remove.mutateAsync(pendingDelete.id);
       toast.success(`Mata pelajaran "${subject.name}" berhasil dihapus.`);
       setPendingDelete(null);
-      load();
     } catch (err) {
       toast.error(getApiErrorMessage(err, `Mata pelajaran "${subject.name}" tidak dapat dihapus.`));
       setPendingDelete(null);
-    } finally {
-      setIsDeleting(false);
     }
   }
 
@@ -142,7 +131,6 @@ export default function SubjectsPage() {
           onSaved={() => {
             closeModal();
             toast.success(editing ? 'Mata pelajaran berhasil diubah.' : 'Mata pelajaran baru berhasil ditambahkan.');
-            load();
           }}
         />
       )}
@@ -155,7 +143,7 @@ export default function SubjectsPage() {
         onImported={(result) => {
           closeImportModal();
           toast.success(result.message);
-          load();
+          void queryClient.invalidateQueries({ queryKey: ['subjects'] });
         }}
       />
 
@@ -181,6 +169,7 @@ function SubjectFormModal({ isOpen, onClose, subject, onSaved }: { isOpen: boole
   const [teachers, setTeachers] = useState<Array<{ id: string; fullName: string }>>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { create, update } = useSubjectMutations();
 
   useEffect(() => {
     setName(subject?.name ?? '');
@@ -204,15 +193,16 @@ function SubjectFormModal({ isOpen, onClose, subject, onSaved }: { isOpen: boole
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!name.trim()) { setError('Nama mata pelajaran wajib diisi.'); return; }
+    const parsed = parseFormData(subjectSchema, { name, code: code || undefined, teacherIds });
+    if (!parsed.success) { setError(firstError(parsed.errors)); return; }
     setIsSubmitting(true);
     try {
       if (isEdit && subject) {
         const payload: UpdateSubjectRequest = { name: toTitleCase(name), code: code || undefined, teacherIds };
-        await apiClient.patch(`/subjects/${subject.id}`, payload);
+        await update.mutateAsync({ id: subject.id, payload });
       } else {
         const payload: CreateSubjectRequest = { name: toTitleCase(name), code: code || undefined, teacherIds };
-        await apiClient.post('/subjects', payload);
+        await create.mutateAsync(payload);
       }
       onSaved();
     } catch (err) {

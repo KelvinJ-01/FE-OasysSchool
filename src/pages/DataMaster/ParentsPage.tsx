@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Search, Plus, Upload, BadgeCheck, BadgeX } from 'lucide-react';
-import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
+import { getApiErrorMessage } from '../../lib/apiClient';
+import { useQueryClient } from '@tanstack/react-query';
+import { useDirectoryQuery, useParentMutations } from '../../hooks/queries/useDirectory';
 import { useToast } from '../../hooks/useToast';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { env } from '../../config/env';
-import { toTitleCase, toSentenceCase, validatePersonName } from '../../lib/format';
+import { toTitleCase, toSentenceCase } from '../../lib/format';
+import { parentSchema } from '../../lib/schemas';
+import { parseFormData, firstError } from '../../lib/validateForm';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { ActionIcons } from '../../components/common/ActionIcons';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
@@ -12,7 +16,6 @@ import { ImportModal } from '../../components/common/ImportModal';
 import { Spinner } from '../../components/common/Spinner';
 import { Modal } from '../../components/ui/modal';
 import { useModal } from '../../hooks/useModal';
-import type { PaginatedResponse } from '../../types/api';
 import type { UserDirectoryEntry, CreateParentRequest } from '../../types/dataMaster';
 
 const inputCls = 'h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 text-[14px] text-gray-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90';
@@ -30,13 +33,24 @@ function initials(name: string): string {
 
 export default function ParentsPage() {
   const { toast } = useToast();
-  const [items, setItems] = useState<UserDirectoryEntry[]>([]);
+  const queryClient = useQueryClient();
+  const { verify } = useParentMutations();
   const [pageNumber, setPageNumber] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, 400);
+
+  const directoryQuery = useDirectoryQuery({
+    role: 'parent',
+    page: pageNumber,
+    pageSize: env.defaultPageSize,
+    search: debouncedSearch || undefined,
+  });
+  const items = directoryQuery.data?.items ?? [];
+  const totalPages = directoryQuery.data?.totalPages ?? 1;
+  const isLoading = directoryQuery.isPending;
+  const listError = directoryQuery.isError
+    ? getApiErrorMessage(directoryQuery.error, 'Gagal memuat data orang tua.')
+    : null;
 
   const [active, setActive] = useState<UserDirectoryEntry | null>(null);
   const [pendingReject, setPendingReject] = useState<UserDirectoryEntry | null>(null);
@@ -46,37 +60,19 @@ export default function ParentsPage() {
   const { isOpen: isDetailOpen, openModal: openDetailModal, closeModal: closeDetailModal } = useModal();
   const { isOpen: isImportOpen, openModal: openImportModal, closeModal: closeImportModal } = useModal();
 
-  const load = useCallback(() => {
-    setIsLoading(true);
-    setListError(null);
-    apiClient
-      .get<PaginatedResponse<UserDirectoryEntry>>('/users', {
-        params: { role: 'parent', page: pageNumber, pageSize: env.defaultPageSize, search: debouncedSearch || undefined },
-      })
-      .then((res) => {
-        setItems(res.data.items);
-        setTotalPages(res.data.totalPages);
-      })
-      .catch((err) => setListError(getApiErrorMessage(err, 'Gagal memuat data orang tua.')))
-      .finally(() => setIsLoading(false));
-  }, [pageNumber, debouncedSearch]);
 
   useEffect(() => {
     setPageNumber(1);
   }, [debouncedSearch]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
 
   async function confirmReject() {
     if (!pendingReject) return;
     setIsProcessing(true);
     try {
-      const { data } = await apiClient.patch<{ message: string }>(`/parents/${pendingReject.id}/verify`, { approve: false });
+      const data = await verify.mutateAsync({ id: pendingReject.id, approve: false });
       toast.success(data.message);
       setPendingReject(null);
-      load();
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'Gagal menolak pendaftaran.'));
       setPendingReject(null);
@@ -89,10 +85,9 @@ export default function ParentsPage() {
     if (!pendingVerify) return;
     setIsProcessing(true);
     try {
-      const { data } = await apiClient.patch<{ message: string }>(`/parents/${pendingVerify.id}/verify`, { approve: true });
+      const data = await verify.mutateAsync({ id: pendingVerify.id, approve: true });
       toast.success(data.message);
       setPendingVerify(null);
-      load();
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'Gagal memverifikasi akun.'));
       setPendingVerify(null);
@@ -248,7 +243,6 @@ export default function ParentsPage() {
         onSaved={() => {
           closeFormModal();
           toast.success(active ? 'Data orang tua berhasil diubah.' : 'Data orang tua berhasil ditambahkan.');
-          load();
         }}
       />
 
@@ -262,7 +256,7 @@ export default function ParentsPage() {
         onImported={(result) => {
           closeImportModal();
           toast.success(result.message);
-          load();
+          void queryClient.invalidateQueries({ queryKey: ['directory'] });
         }}
       />
 
@@ -336,6 +330,7 @@ function ParentFormModal({ isOpen, onClose, parent, onSaved }: { isOpen: boolean
   const [form, setForm] = useState({ fullName: '', email: '', phone: '', address: '', occupation: '', studentNisns: '' });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { create, update } = useParentMutations();
 
   useEffect(() => {
     setForm({
@@ -357,15 +352,17 @@ function ParentFormModal({ isOpen, onClose, parent, onSaved }: { isOpen: boolean
     e.preventDefault();
     setError(null);
 
-    const nameError = validatePersonName(form.fullName);
-    if (nameError) { setError(`Nama Lengkap: ${nameError}`); return; }
-    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) { setError('Format email tidak valid.'); return; }
+    const parsed = parseFormData(parentSchema, {
+      fullName: form.fullName,
+      email: form.email,
+      phone: form.phone || undefined,
+      address: form.address || undefined,
+      occupation: form.occupation || undefined,
+      studentNisns: form.studentNisns || undefined,
+    });
+    if (!parsed.success) { setError(firstError(parsed.errors)); return; }
 
     const nisns = form.studentNisns.split(',').map((x) => x.trim()).filter(Boolean);
-    if (nisns.some((n) => !/^\d{10}$/.test(n))) {
-      setError('Setiap NISN anak harus 10 digit angka. Pisahkan dengan koma bila lebih dari satu.');
-      return;
-    }
 
     setIsSubmitting(true);
     const payload: CreateParentRequest = {
@@ -378,9 +375,9 @@ function ParentFormModal({ isOpen, onClose, parent, onSaved }: { isOpen: boolean
     };
     try {
       if (isEdit && parent) {
-        await apiClient.patch(`/parents/${parent.id}`, payload);
+        await update.mutateAsync({ id: parent.id, payload });
       } else {
-        await apiClient.post('/parents', payload);
+        await create.mutateAsync(payload);
       }
       onSaved();
     } catch (err) {

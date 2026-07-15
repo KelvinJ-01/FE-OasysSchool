@@ -7,7 +7,9 @@ import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useStudentsQuery, useClassesQuery, useStudentMutations } from '../../hooks/useStudents';
 import { env } from '../../config/env';
 import { getApiErrorMessage } from '../../lib/apiClient';
-import { toTitleCase, toSentenceCase, validatePersonName } from '../../lib/format';
+import { toTitleCase, toSentenceCase } from '../../lib/format';
+import { studentSchema } from '../../lib/schemas';
+import { parseFormData, firstError } from '../../lib/validateForm';
 import { PhotoUpload } from '../../components/common/PhotoUpload';
 import { Spinner } from '../../components/common/Spinner';
 import { DataTable, type Column } from '../../components/common/DataTable';
@@ -374,16 +376,21 @@ function StudentFormModal({ isOpen, onClose, student, classes, onSaved }: { isOp
     e.preventDefault();
     setError(null);
 
-    const nameError = validatePersonName(form.fullName);
-    if (nameError) { setError(`Nama Lengkap: ${nameError}`); return; }
-    if (!isEdit && !/^\d{10}$/.test(form.nisn)) { setError('NISN wajib 10 digit angka.'); return; }
-    for (const [label, value] of [['Nama Ayah', form.fatherName], ['Nama Ibu', form.motherName], ['Nama Wali Siswa 1', form.guardian1Name], ['Nama Wali Siswa 2', form.guardian2Name]] as const) {
-      if (value) {
-        const err = validatePersonName(value);
-        if (err) { setError(`${label}: ${err}`); return; }
-      }
-    }
-    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email.trim())) { setError('Format email tidak valid.'); return; }
+    const parsed = parseFormData(studentSchema, {
+      fullName: form.fullName,
+      nisn: form.nisn,
+      classId: form.classId || undefined,
+      gender: form.gender || undefined,
+      religion: form.religion || undefined,
+      email: form.email || undefined,
+      phone: form.phone || undefined,
+      address: form.address || undefined,
+      fatherName: form.fatherName || undefined,
+      motherName: form.motherName || undefined,
+      guardian1Name: form.guardian1Name || undefined,
+      guardian2Name: form.guardian2Name || undefined,
+    });
+    if (!parsed.success) { setError(firstError(parsed.errors)); return; }
 
     const guardian1: StudentGuardian | undefined = form.guardian1Name ? { name: toTitleCase(form.guardian1Name), relation: 'wali', phone: form.guardian1Phone || null } : undefined;
     const guardian2: StudentGuardian | undefined = form.guardian2Name ? { name: toTitleCase(form.guardian2Name), relation: 'wali', phone: form.guardian2Phone || null } : undefined;

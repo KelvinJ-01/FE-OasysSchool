@@ -4,17 +4,20 @@ import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { Spinner } from '../../components/common/Spinner';
 import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
+import { useQueryClient } from '@tanstack/react-query';
+import { useClassesPageQuery, useClassMutations } from '../../hooks/queries/useAcademic';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { Modal } from '../../components/ui/modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { ActionIcons } from '../../components/common/ActionIcons';
 import { ImportModal } from '../../components/common/ImportModal';
 import { useModal } from '../../hooks/useModal';
-import type { PaginatedResponse } from '../../types/api';
 import type { ClassEntity } from '../../types/entities';
 import { EDUCATION_LEVEL_LABEL, GRADE_OPTIONS, type CreateClassRequest, type UpdateClassRequest } from '../../types/dataMaster';
 import type { EducationLevel } from '../../types/entities';
 import { toUpperCaseClean } from '../../lib/format';
+import { classSchema } from '../../lib/schemas';
+import { parseFormData, firstError } from '../../lib/validateForm';
 
 const PAGE_SIZE = 10;
 
@@ -23,47 +26,32 @@ export default function ClassesPage() {
   const { toast } = useToast();
   const isAdmin = user?.role === 'administrator';
 
-  const [items, setItems] = useState<ClassEntity[]>([]);
   const [pageNumber, setPageNumber] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ClassEntity | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+
+  const listQuery = useClassesPageQuery({ page: pageNumber, pageSize: PAGE_SIZE });
+  const { remove } = useClassMutations();
+  const queryClient = useQueryClient();
+  const items = listQuery.data?.items ?? [];
+  const totalPages = listQuery.data?.totalPages ?? 1;
+  const isLoading = listQuery.isPending;
+  const listError = listQuery.isError ? getApiErrorMessage(listQuery.error, 'Gagal memuat data kelas.') : null;
+  const isDeleting = remove.isPending;
 
   const { isOpen, openModal, closeModal } = useModal();
   const { isOpen: isImportOpen, openModal: openImportModal, closeModal: closeImportModal } = useModal();
   const [editing, setEditing] = useState<ClassEntity | null>(null);
 
-  function load() {
-    setIsLoading(true);
-    setListError(null);
-    apiClient
-      .get<PaginatedResponse<ClassEntity>>('/classes', { params: { page: pageNumber, pageSize: PAGE_SIZE } })
-      .then((res) => {
-        setItems(res.data.items);
-        setTotalPages(res.data.totalPages);
-      })
-      .catch((err) => setListError(getApiErrorMessage(err, 'Gagal memuat data kelas.')))
-      .finally(() => setIsLoading(false));
-  }
-
-  useEffect(load, [pageNumber]);
 
   async function confirmDelete() {
     if (!pendingDelete) return;
-    const cls = pendingDelete;
-    setIsDeleting(true);
     try {
-      await apiClient.delete(`/classes/${cls.id}`);
-      toast.success(`Kelas "${cls.name}" berhasil dihapus.`);
-      setPendingDelete(null);
-      load();
+      await remove.mutateAsync(pendingDelete.id);
+      toast.success(`Kelas "${pendingDelete.name}" dihapus.`);
     } catch (err) {
-      toast.error(getApiErrorMessage(err, `Kelas "${cls.name}" tidak dapat dihapus. Kemungkinan masih ada siswa yang terdaftar di dalamnya.`));
-      setPendingDelete(null);
+      toast.error(getApiErrorMessage(err, 'Gagal menghapus kelas.'));
     } finally {
-      setIsDeleting(false);
+      setPendingDelete(null);
     }
   }
 
@@ -135,7 +123,6 @@ export default function ClassesPage() {
           onSaved={() => {
             closeModal();
             toast.success(editing ? 'Kelas berhasil diubah.' : 'Kelas baru berhasil ditambahkan.');
-            load();
           }}
         />
       )}
@@ -147,7 +134,7 @@ export default function ClassesPage() {
         onImported={(result) => {
           closeImportModal();
           toast.success(result.message);
-          load();
+          void queryClient.invalidateQueries({ queryKey: ['classes'] });
         }}
       />
 
@@ -174,6 +161,7 @@ function ClassFormModal({ isOpen, onClose, cls, onSaved }: { isOpen: boolean; on
   const [teachers, setTeachers] = useState<Array<{ id: string; fullName: string }>>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { create, update } = useClassMutations();
 
   useEffect(() => {
     setName(cls?.name ?? '');
@@ -194,16 +182,20 @@ function ClassFormModal({ isOpen, onClose, cls, onSaved }: { isOpen: boolean; on
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!name.trim()) { setError('Nama kelas wajib diisi.'); return; }
-    if (!educationLevel) { setError('Jenjang wajib dipilih.'); return; }
+    const parsed = parseFormData(classSchema, {
+      name, educationLevel: educationLevel || undefined,
+      gradeLevel: gradeLevel || undefined,
+      homeroomTeacherId: homeroomTeacherId || undefined,
+    });
+    if (!parsed.success) { setError(firstError(parsed.errors)); return; }
     setIsSubmitting(true);
     try {
       if (isEdit && cls) {
         const payload: UpdateClassRequest = { name: toUpperCaseClean(name), educationLevel: educationLevel || undefined, gradeLevel: gradeLevel || undefined, homeroomTeacherId: homeroomTeacherId || undefined };
-        await apiClient.patch(`/classes/${cls.id}`, payload);
+        await update.mutateAsync({ id: cls.id, payload });
       } else {
         const payload: CreateClassRequest = { name: toUpperCaseClean(name), educationLevel: educationLevel || undefined, gradeLevel: gradeLevel || undefined, homeroomTeacherId: homeroomTeacherId || undefined };
-        await apiClient.post('/classes', payload);
+        await create.mutateAsync(payload);
       }
       onSaved();
     } catch (err) {

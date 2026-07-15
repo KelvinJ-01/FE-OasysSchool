@@ -3,6 +3,8 @@ import { ShieldCheck } from 'lucide-react';
 import { Modal } from '../ui/modal';
 import { Spinner } from './Spinner';
 import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
+import { otpSchema } from '../../lib/schemas';
+import { parseFormData } from '../../lib/validateForm';
 
 interface OtpConfirmModalProps {
   isOpen: boolean;
@@ -64,7 +66,8 @@ export function OtpConfirmModal({
     e.preventDefault();
     setError(null);
     const otp = digits.join('');
-    if (otp.length !== LENGTH) {
+    const parsed = parseFormData(otpSchema, { otp });
+    if (!parsed.success) {
       setError('Masukkan seluruh 6 digit kode.');
       return;
     }

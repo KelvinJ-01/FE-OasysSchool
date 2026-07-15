@@ -39,3 +39,30 @@ describe('helper error API', () => {
     expect(getApiErrorDetails(new Error('x'))).toEqual([]);
   });
 });
+
+describe('getApiErrorMessage — pesan yang actionable', () => {
+  it('memakai pesan dari API bila tersedia', () => {
+    const err = { response: { status: 422, data: { error: { message: 'NISN sudah terdaftar.' } } } };
+    expect(getApiErrorMessage(err, 'fallback')).toBe('NISN sudah terdaftar.');
+  });
+
+  it('memberi pesan koneksi saat server tidak terjangkau', () => {
+    const err = { request: {}, response: undefined };
+    expect(getApiErrorMessage(err, 'fallback')).toContain('Tidak dapat terhubung ke server');
+  });
+
+  it('memberi pesan khusus saat permintaan kehabisan waktu', () => {
+    const err = { code: 'ECONNABORTED', request: {}, response: undefined };
+    expect(getApiErrorMessage(err, 'fallback')).toContain('terlalu lama merespons');
+  });
+
+  it('memberi pesan khusus untuk galat server 5xx', () => {
+    const err = { response: { status: 500, data: {} } };
+    expect(getApiErrorMessage(err, 'fallback')).toContain('Server sedang bermasalah');
+  });
+
+  it('memakai fallback untuk galat klien tanpa pesan', () => {
+    const err = { response: { status: 400, data: {} } };
+    expect(getApiErrorMessage(err, 'Gagal memuat data guru.')).toBe('Gagal memuat data guru.');
+  });
+});

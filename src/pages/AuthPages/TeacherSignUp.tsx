@@ -4,7 +4,9 @@ import { Eye, EyeOff, CircleCheck, CircleX } from 'lucide-react';
 import PageMeta from '../../components/common/PageMeta';
 import AuthPageLayout from './AuthPageLayout';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
-import { toTitleCase, validatePersonName } from '../../lib/format';
+import { toTitleCase } from '../../lib/format';
+import { teacherSignUpSchema } from '../../lib/schemas';
+import { parseFormData, firstError } from '../../lib/validateForm';
 import { Spinner } from '../../components/common/Spinner';
 import { Skeleton } from '../../components/common/Skeleton';
 
@@ -59,21 +61,11 @@ export default function TeacherSignUp() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setFieldError(null);
-    const nameError = validatePersonName(fullName);
-    if (nameError) {
-      setFieldError(`Nama Lengkap: ${nameError}`);
-      return;
-    }
-    if (nuptk && !/^\d{16}$/.test(nuptk)) {
-      setFieldError('NUPTK harus 16 digit angka, atau kosongkan bila belum punya.');
-      return;
-    }
-    if (password.length < 8) {
-      setFieldError('Kata sandi minimal 8 karakter.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setFieldError('Konfirmasi kata sandi tidak sama.');
+    const parsed = parseFormData(teacherSignUpSchema, {
+      fullName, phone: phone || undefined, nuptk: nuptk || undefined, password, confirmPassword,
+    });
+    if (!parsed.success) {
+      setFieldError(firstError(parsed.errors));
       return;
     }
     setIsSubmitting(true);

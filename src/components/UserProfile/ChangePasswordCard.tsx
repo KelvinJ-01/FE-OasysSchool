@@ -4,6 +4,8 @@ import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiCli
 import { useToast } from '../../hooks/useToast';
 import { Spinner } from '../common/Spinner';
 import { OtpConfirmModal } from '../common/OtpConfirmModal';
+import { changePasswordSchema } from '../../lib/schemas';
+import { parseFormData } from '../../lib/validateForm';
 import type { ChangePasswordRequest } from '../../types/profile';
 import type { MessageResponse } from '../../types/auth';
 
@@ -29,15 +31,9 @@ export function ChangePasswordCard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function validate(): boolean {
-    const next: FieldErrors = {};
-    if (!values.currentPassword) next.currentPassword = 'Kata sandi saat ini wajib diisi.';
-    if (values.newPassword.length < 8) next.newPassword = 'Kata sandi baru minimal 8 karakter.';
-    if (values.newPassword && values.currentPassword && values.newPassword === values.currentPassword) {
-      next.newPassword = 'Kata sandi baru harus berbeda dari kata sandi saat ini.';
-    }
-    if (values.confirmNewPassword !== values.newPassword) next.confirmNewPassword = 'Konfirmasi kata sandi tidak cocok.';
-    setErrors(next);
-    return Object.keys(next).length === 0;
+    const result = parseFormData(changePasswordSchema, values);
+    setErrors(result.success ? {} : result.errors);
+    return result.success;
   }
 
   const [isOtpOpen, setIsOtpOpen] = useState(false);

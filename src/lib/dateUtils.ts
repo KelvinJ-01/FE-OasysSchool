@@ -21,7 +21,7 @@ export function dayOfWeekFromIso(iso: string): number | undefined {
 const DAY_NAMES = ['', 'Senin', 'Selasa', 'Rabu', 'Kamis', "Jum'at", 'Sabtu', 'Minggu'];
 
 export function dayName(dayOfWeek: number): string {
-  return DAY_NAMES[dayOfWeek] ?? '—';
+  return DAY_NAMES[dayOfWeek] || '—';
 }
 
 export function nextDateForDayOfWeek(dayOfWeek: number, from: Date = new Date()): string {

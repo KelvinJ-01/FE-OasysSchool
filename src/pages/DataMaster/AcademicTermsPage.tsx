@@ -3,11 +3,13 @@ import { Plus, Pencil } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { Spinner } from '../../components/common/Spinner';
-import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
+import { getApiErrorMessage } from '../../lib/apiClient';
+import { useTermsPageQuery, useTermMutations } from '../../hooks/queries/useAcademic';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { Modal } from '../../components/ui/modal';
+import { academicTermSchema } from '../../lib/schemas';
+import { parseFormData, firstError } from '../../lib/validateForm';
 import { useModal } from '../../hooks/useModal';
-import type { PaginatedResponse } from '../../types/api';
 import type { AcademicTerm, Semester } from '../../types/entities';
 import type { CreateAcademicTermRequest, UpdateAcademicTermRequest } from '../../types/dataMaster';
 
@@ -23,29 +25,17 @@ export default function AcademicTermsPage() {
   const { toast } = useToast();
   const isAdmin = user?.role === 'administrator';
 
-  const [items, setItems] = useState<AcademicTerm[]>([]);
   const [pageNumber, setPageNumber] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
+
+  const listQuery = useTermsPageQuery({ page: pageNumber, pageSize: PAGE_SIZE });
+  const items = listQuery.data?.items ?? [];
+  const totalPages = listQuery.data?.totalPages ?? 1;
+  const isLoading = listQuery.isPending;
+  const listError = listQuery.isError ? getApiErrorMessage(listQuery.error, 'Gagal memuat data tahun ajaran.') : null;
 
   const { isOpen, openModal, closeModal } = useModal();
   const [editing, setEditing] = useState<AcademicTerm | null>(null);
 
-  function load() {
-    setIsLoading(true);
-    setListError(null);
-    apiClient
-      .get<PaginatedResponse<AcademicTerm>>('/academic-terms', { params: { page: pageNumber, pageSize: PAGE_SIZE } })
-      .then((res) => {
-        setItems(res.data.items);
-        setTotalPages(res.data.totalPages);
-      })
-      .catch((err) => setListError(getApiErrorMessage(err, 'Gagal memuat data tahun ajaran.')))
-      .finally(() => setIsLoading(false));
-  }
-
-  useEffect(load, [pageNumber]);
 
   function openCreate() {
     setEditing(null);
@@ -122,7 +112,6 @@ export default function AcademicTermsPage() {
           onSaved={() => {
             closeModal();
             toast.success(editing ? 'Tahun ajaran berhasil diubah.' : 'Tahun ajaran baru berhasil ditambahkan.');
-            load();
           }}
         />
       )}
@@ -149,6 +138,7 @@ function AcademicTermFormModal({
   const [isActive, setIsActive] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { create, update } = useTermMutations();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -163,17 +153,16 @@ function AcademicTermFormModal({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!/^\d{4}\/\d{4}$/.test(yearLabel.trim())) { setError('Tahun ajaran wajib berformat 2025/2026.'); return; }
-    if (!startDate || !endDate) { setError('Tanggal mulai dan selesai wajib diisi.'); return; }
-    if (endDate <= startDate) { setError('Tanggal selesai harus setelah tanggal mulai.'); return; }
+    const parsed = parseFormData(academicTermSchema, { yearLabel, semester, startDate, endDate, isActive });
+    if (!parsed.success) { setError(firstError(parsed.errors)); return; }
     setIsSubmitting(true);
     try {
       if (isEdit && term) {
         const payload: UpdateAcademicTermRequest = { yearLabel, semester, startDate, endDate, isActive };
-        await apiClient.patch(`/academic-terms/${term.id}`, payload);
+        await update.mutateAsync({ id: term.id, payload });
       } else {
         const payload: CreateAcademicTermRequest = { yearLabel, semester, startDate, endDate, isActive };
-        await apiClient.post('/academic-terms', payload);
+        await create.mutateAsync(payload);
       }
       onSaved();
     } catch (err) {

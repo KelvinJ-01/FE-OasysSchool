@@ -1,18 +1,23 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { DatePicker } from '../../components/common/DatePicker';
+import { ActionIcons } from '../../components/common/ActionIcons';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { useSchedulesQuery, useAllTermsQuery, useScheduleMutations } from '../../hooks/queries/useSchedules';
+import { useAllClassesQuery, useAllSubjectsQuery } from '../../hooks/queries/useFilters';
+import { useStaffDirectoryQuery } from '../../hooks/queries/useAttendance';
+import { scheduleSchema } from '../../lib/schemas';
+import { parseFormData, firstError } from '../../lib/validateForm';
 import { todayIso, dayOfWeekFromIso, dayName, formatDayAndDate, nextDateForDayOfWeek } from '../../lib/dateUtils';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { Spinner } from '../../components/common/Spinner';
-import { apiClient, getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '../../lib/apiClient';
-import { env } from '../../config/env';
+import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '../../lib/apiClient';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { Modal } from '../../components/ui/modal';
 import { useModal } from '../../hooks/useModal';
 import PageMeta from '../../components/common/PageMeta';
 import PageBreadCrumb from '../../components/common/PageBreadCrumb';
-import type { PaginatedResponse } from '../../types/api';
 import type { Schedule, ClassEntity, Subject, AcademicTerm } from '../../types/entities';
 import type { UserDirectoryEntry } from '../../types/dataMaster';
 import type { CreateScheduleRequest, UpdateScheduleRequest } from '../../types/schedule';
@@ -24,61 +29,43 @@ export default function SchedulesPage() {
   const { toast } = useToast();
   const isAdmin = user?.role === 'administrator';
 
-  const [items, setItems] = useState<Schedule[]>([]);
-  const [classes, setClasses] = useState<ClassEntity[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [teachers, setTeachers] = useState<UserDirectoryEntry[]>([]);
-  const [academicTerms, setAcademicTerms] = useState<AcademicTerm[]>([]);
 
   const [classFilter, setClassFilter] = useState('');
   const [termFilter, setTermFilter] = useState('');
   const [dateFilter, setDateFilter] = useState(todayIso);
   const [pageNumber, setPageNumber] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
 
   const { isOpen, openModal, closeModal } = useModal();
   const [editing, setEditing] = useState<Schedule | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Schedule | null>(null);
+
+  const classesQuery = useAllClassesQuery();
+  const subjectsQuery = useAllSubjectsQuery();
+  const teachersQuery = useStaffDirectoryQuery('teacher', isAdmin);
+  const termsQuery = useAllTermsQuery();
+  const classes = useMemo(() => classesQuery.data ?? [], [classesQuery.data]);
+  const subjects = useMemo(() => subjectsQuery.data ?? [], [subjectsQuery.data]);
+  const teachers = useMemo(() => teachersQuery.data ?? [], [teachersQuery.data]);
+  const academicTerms = useMemo(() => termsQuery.data ?? [], [termsQuery.data]);
 
   useEffect(() => {
-    apiClient.get<PaginatedResponse<ClassEntity>>('/classes', { params: { pageSize: env.maxPageSize } })
-      .then((res) => setClasses(res.data.items)).catch(() => setClasses([]));
-    apiClient.get<PaginatedResponse<Subject>>('/subjects', { params: { pageSize: env.maxPageSize } })
-      .then((res) => setSubjects(res.data.items)).catch(() => setSubjects([]));
-    apiClient.get<PaginatedResponse<UserDirectoryEntry>>('/users', { params: { role: 'teacher', pageSize: env.maxPageSize } })
-      .then((res) => setTeachers(res.data.items)).catch(() => setTeachers([]));
-    apiClient.get<PaginatedResponse<AcademicTerm>>('/academic-terms', { params: { pageSize: env.maxPageSize } })
-      .then((res) => {
-        setAcademicTerms(res.data.items);
-        const active = res.data.items.find((t) => t.isActive);
-        if (active) setTermFilter(active.id);
-      })
-      .catch(() => setAcademicTerms([]));
-  }, []);
+    if (termFilter) return;
+    const active = academicTerms.find((t) => t.isActive);
+    if (active) setTermFilter(active.id);
+  }, [academicTerms, termFilter]);
 
-  function load() {
-    setIsLoading(true);
-    setListError(null);
-    apiClient
-      .get<PaginatedResponse<Schedule>>('/schedules', {
-        params: {
-          page: pageNumber,
-          pageSize: PAGE_SIZE,
-          classId: classFilter || undefined,
-          academicTermId: termFilter || undefined,
-          dayOfWeek: dayOfWeekFromIso(dateFilter),
-        },
-      })
-      .then((res) => {
-        setItems(res.data.items);
-        setTotalPages(res.data.totalPages);
-      })
-      .catch((err) => setListError(getApiErrorMessage(err, 'Gagal memuat data jadwal.')))
-      .finally(() => setIsLoading(false));
-  }
-
-  useEffect(load, [pageNumber, classFilter, termFilter, dateFilter]);
+  const listQuery = useSchedulesQuery({
+    page: pageNumber,
+    pageSize: PAGE_SIZE,
+    classId: classFilter || undefined,
+    academicTermId: termFilter || undefined,
+    dayOfWeek: dayOfWeekFromIso(dateFilter),
+  });
+  const { remove } = useScheduleMutations();
+  const items = useMemo(() => listQuery.data?.items ?? [], [listQuery.data]);
+  const totalPages = listQuery.data?.totalPages ?? 1;
+  const isLoading = listQuery.isPending;
+  const listError = listQuery.isError ? getApiErrorMessage(listQuery.error, 'Gagal memuat data jadwal.') : null;
 
   const classNameById = useMemo(() => Object.fromEntries(classes.map((c) => [c.id, c.name])), [classes]);
   const subjectNameById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s.name])), [subjects]);
@@ -99,13 +86,17 @@ export default function SchedulesPage() {
     openModal();
   }
 
-  async function handleDelete(schedule: Schedule) {
-    const label = `${dayName(schedule.dayOfWeek)} ${schedule.startTime}–${schedule.endTime} · ${classNameById[schedule.classId] ?? ''}`;
-    if (!window.confirm(`Hapus jadwal "${label}"? Tindakan ini tidak bisa dibatalkan.`)) return;
+  function scheduleLabel(schedule: Schedule): string {
+    return `${dayName(schedule.dayOfWeek)} ${schedule.startTime}–${schedule.endTime} · ${classNameById[schedule.classId] ?? ''}`;
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    const schedule = pendingDelete;
     try {
-      await apiClient.delete(`/schedules/${schedule.id}`);
+      await remove.mutateAsync(schedule.id);
       toast.success('Jadwal berhasil dihapus.');
-      load();
+      setPendingDelete(null);
     } catch (err) {
       const code = getApiErrorCode(err);
       toast.error(
@@ -113,6 +104,7 @@ export default function SchedulesPage() {
           ? 'Jadwal ini tidak bisa dihapus karena sudah memiliki riwayat presensi terkait.'
           : getApiErrorMessage(err, 'Gagal menghapus jadwal.'),
       );
+      setPendingDelete(null);
     }
   }
 
@@ -133,14 +125,11 @@ export default function SchedulesPage() {
             header: '',
             className: 'text-right',
             render: (s: Schedule) => (
-              <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => openEdit(s)} aria-label="Ubah jadwal" className="text-gray-400 hover:text-brand-500">
-                  <Pencil size={16} aria-hidden="true" />
-                </button>
-                <button type="button" onClick={() => handleDelete(s)} aria-label="Hapus jadwal" className="text-gray-400 hover:text-error-600">
-                  <Trash2 size={16} aria-hidden="true" />
-                </button>
-              </div>
+              <ActionIcons
+                label={scheduleLabel(s)}
+                onEdit={() => openEdit(s)}
+                onDelete={() => setPendingDelete(s)}
+              />
             ),
           } as Column<Schedule>,
         ]
@@ -206,6 +195,17 @@ export default function SchedulesPage() {
         onPageChange={setPageNumber}
       />
 
+      <ConfirmDialog
+        isOpen={pendingDelete !== null}
+        title="Hapus Jadwal"
+        description={pendingDelete ? `Jadwal "${scheduleLabel(pendingDelete)}" akan dihapus. Tindakan ini tidak dapat dibatalkan.` : ''}
+        confirmLabel="Ya, Hapus"
+        tone="danger"
+        isProcessing={remove.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
+
       {isAdmin && (
         <ScheduleFormModal
           isOpen={isOpen}
@@ -219,7 +219,6 @@ export default function SchedulesPage() {
           onSaved={() => {
             closeModal();
             toast.success(editing ? 'Jadwal berhasil diubah.' : 'Jadwal baru berhasil ditambahkan.');
-            load();
           }}
         />
       )}
@@ -259,6 +258,7 @@ function ScheduleFormModal({
   const [endTime, setEndTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [conflictError, setConflictError] = useState<string | null>(null);
+  const { create, update } = useScheduleMutations();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -276,21 +276,17 @@ function ScheduleFormModal({
     e.preventDefault();
     setConflictError(null);
 
-    if (!classId || !subjectId || !teacherId || !academicTermId) {
-      toast.error('Kelas, mata pelajaran, guru, dan tahun ajaran wajib dipilih.');
+    const parsed = parseFormData(scheduleSchema, {
+      classId, subjectId, teacherId, academicTermId, sessionDate, startTime, endTime,
+    });
+    if (!parsed.success) {
+      toast.error(firstError(parsed.errors) ?? 'Periksa kembali isian jadwal.');
       return;
     }
+
     const dayOfWeek = dayOfWeekFromIso(sessionDate);
     if (!dayOfWeek) {
       toast.error('Tanggal wajib dipilih.');
-      return;
-    }
-    if (!startTime || !endTime) {
-      toast.error('Jam mulai dan jam selesai wajib diisi.');
-      return;
-    }
-    if (endTime <= startTime) {
-      toast.error('Jam selesai harus setelah jam mulai.');
       return;
     }
 
@@ -300,12 +296,12 @@ function ScheduleFormModal({
         const payload: UpdateScheduleRequest = {
           classId, subjectId, teacherId, academicTermId, dayOfWeek, startTime, endTime,
         };
-        await apiClient.patch(`/schedules/${schedule.id}`, payload);
+        await update.mutateAsync({ id: schedule.id, payload });
       } else {
         const payload: CreateScheduleRequest = {
           classId, subjectId, teacherId, academicTermId, dayOfWeek, startTime, endTime,
         };
-        await apiClient.post('/schedules', payload);
+        await create.mutateAsync(payload);
       }
       onSaved();
     } catch (err) {

@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
 import { useAuth } from '../../hooks/useAuth';
-import { getAllClasses } from '../../services/classesService';
-import { getAllSubjects } from '../../services/subjectsService';
+import { useAllClassesQuery, useAllSubjectsQuery } from '../../hooks/queries/useFilters';
 import { env } from '../../config/env';
 import { Spinner } from '../common/Spinner';
 import type { PaginatedResponse } from '../../types/api';
-import type { ClassEntity, AcademicTerm, Subject } from '../../types/entities';
+import type { AcademicTerm } from '../../types/entities';
 
 type ExportFormat = 'csv' | 'xlsx';
 
@@ -20,9 +19,11 @@ export function ReportsExportFilter() {
   const { user } = useAuth();
   const isTeacher = user?.role === 'teacher';
 
-  const [classes, setClasses] = useState<ClassEntity[]>([]);
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const classesQuery = useAllClassesQuery();
+  const subjectsQuery = useAllSubjectsQuery();
+  const classes = useMemo(() => classesQuery.data ?? [], [classesQuery.data]);
+  const subjects = useMemo(() => subjectsQuery.data ?? [], [subjectsQuery.data]);
   const [subjectId, setSubjectId] = useState<string>('');
   const [classId, setClassId] = useState<string>('');
   const [academicTermId, setAcademicTermId] = useState<string>('');
@@ -31,17 +32,13 @@ export function ReportsExportFilter() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    getAllClasses()
-      .then((items) => setClasses(items))
-      .catch(() => setClasses([]));
+
 
     apiClient.get<PaginatedResponse<AcademicTerm>>('/academic-terms', { params: { pageSize: env.maxPageSize } })
       .then((res) => setTerms(res.data.items))
       .catch(() => setTerms([]));
 
-    getAllSubjects()
-      .then((items) => setSubjects(items))
-      .catch(() => setSubjects([]));
+
   }, [user?.role]);
 
   const isClassRequired = isTeacher;

@@ -11,10 +11,26 @@ disajikan oleh nginx. Prosesnya dua tahap dalam satu `Dockerfile`:
 2. **Tahap `runtime`** — nginx menyajikan hasil build. Node tidak ikut ke image akhir,
    sehingga ukurannya kecil dan permukaan serangannya sempit.
 
-## Prasyarat
+## Dua cara memakai berkas Docker ini
+
+**Untuk merilis (deploy).** Anda tidak memerlukan Docker di komputer Anda. GitHub Actions
+yang membangun image, lalu server produksi menariknya. Langsung ke bagian
+[Membangun image tanpa Docker di komputer Anda](#membangun-image-tanpa-docker-di-komputer-anda-cicd).
+
+**Untuk menjalankan kontainer secara lokal.** Barulah Docker perlu terpasang; ikuti
+bagian Prasyarat di bawah. Perlu dicatat, untuk pengembangan sehari-hari `npm run dev`
+sudah memadai dan lebih cepat — Docker lokal hanya berguna bila Anda ingin menguji
+hasil build produksi persis seperti yang berjalan di server.
+
+## Prasyarat (hanya untuk menjalankan Docker secara lokal)
 
 - Docker Engine 20.10 atau lebih baru
 - Docker Compose v2 (`docker compose`, tanpa tanda hubung)
+
+Keduanya dapat diperoleh lewat Docker Desktop maupun Colima. Pengguna **macOS 12
+Monterey** perlu membaca bagian khusus di bawah karena Docker Desktop terbaru tidak dapat
+dipasang di sana. Bila keduanya tidak dapat dipasang, lewati bagian ini — merilis lewat
+CI/CD tetap dapat dilakukan.
 
 Periksa versi Anda:
 
@@ -31,13 +47,79 @@ belum berjalan — jalankan aplikasi Docker Desktop terlebih dahulu.
 
 Docker Desktop hanya mendukung versi macOS saat ini dan dua rilis mayor sebelumnya. Per
 2026 yang didukung adalah macOS 13 Ventura, 14 Sonoma, dan 15 Sequoia, sehingga
-**installer terbaru menolak dipasang di Monterey** (biasanya muncul pesan menyesatkan
-seperti "Docker.dmg is corrupt", padahal masalahnya versi macOS).
+**installer Docker Desktop terbaru menolak dipasang di Monterey** (biasanya muncul pesan
+menyesatkan seperti "Docker.dmg is corrupt", padahal masalahnya versi macOS).
+
+Ada dua jalan, keduanya menghasilkan Docker Engine yang mampu menjalankan berkas Docker
+di repositori ini tanpa penyesuaian apa pun.
+
+#### Opsi A — Colima (disarankan)
+
+Colima menjalankan Docker Engine di dalam VM Linux ringan dan dikendalikan sepenuhnya
+lewat terminal. Karena Colima dipasang melalui Homebrew, ia **tidak terikat batasan versi
+macOS milik Docker Desktop**, sehingga Anda tetap memperoleh Docker Engine terkini beserta
+pembaruan keamanannya. Colima juga gratis dan bersumber terbuka, tanpa ketentuan lisensi
+berbayar Docker Desktop.
+
+1. Copot sisa Docker lama. Ini penting: sisa biner dari pemasangan Docker Desktop
+   terdahulu dapat membuat pemasangan lewat Homebrew gagal.
+
+   ```bash
+   sudo rm -rf /Applications/Docker.app
+   sudo rm -f /usr/local/bin/docker /usr/local/bin/docker-compose /usr/local/bin/hub-tool
+   ```
+
+2. Pasang Homebrew bila belum ada:
+
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+
+3. Pasang Colima beserta Docker CLI, Compose, dan Buildx:
+
+   ```bash
+   brew install colima docker docker-compose docker-buildx
+   ```
+
+   Paket `colima` menyediakan mesinnya, `docker` menyediakan perintah CLI, sedangkan
+   `docker-compose` dan `docker-buildx` menyediakan sub-perintah `docker compose` dan
+   `docker buildx`.
+
+4. Jalankan mesinnya. Bawaannya 2 CPU dan 2 GB memori — cukup untuk proyek ini:
+
+   ```bash
+   colima start
+   ```
+
+   Bila ingin lebih lega: `colima start --cpu 4 --memory 8`.
+
+5. Verifikasi:
+
+   ```bash
+   docker version
+   docker compose version
+   docker run --rm hello-world
+   ```
+
+   `docker version` harus menampilkan bagian `Server`, bukan galat koneksi.
+
+Perintah harian Colima:
+
+```bash
+colima status
+colima stop
+colima start
+colima delete
+```
+
+Colima tidak berjalan otomatis saat Mac dinyalakan; jalankan `colima start` lebih dulu
+sebelum memakai perintah `docker`.
+
+#### Opsi B — Docker Desktop 4.41.2
 
 Versi terakhir yang mendukung Monterey adalah **Docker Desktop 4.41.2** (rilis 6 Mei
-2025); versi 4.42 ke atas mensyaratkan Ventura 13.3 atau lebih baru. Versi 4.41.2 sudah
-membawa Docker Engine modern beserta Compose v2, sehingga seluruh berkas Docker di
-repositori ini berjalan tanpa penyesuaian.
+2025); versi 4.42 ke atas mensyaratkan Ventura 13.3 atau lebih baru. Pilih opsi ini bila
+Anda memang menginginkan antarmuka grafis Docker Desktop.
 
 Tautan unduhan resmi Docker untuk 4.41.2:
 
@@ -57,17 +139,83 @@ Langkah pemasangan:
 3. Buka berkas `.dmg`, seret ikon Docker ke folder Applications.
 4. Jalankan Docker.app. Bila macOS menolak dengan alasan "cannot check it for malicious
    software", klik kanan aplikasinya lalu pilih **Open**.
-5. Tunggu ikon paus di menu bar berhenti beranimasi, lalu verifikasi:
+5. Tunggu ikon paus di menu bar berhenti beranimasi, lalu verifikasi seperti pada
+   langkah 5 opsi Colima.
 
-   ```bash
-   docker version
-   docker compose version
-   docker run --rm hello-world
-   ```
+Catatan: 4.41.2 tidak lagi menerima pembaruan keamanan, dan versi berikutnya tidak akan
+bisa dipasang di Monterey. Inilah alasan Colima lebih disarankan untuk macOS 12.
 
-Catatan: 4.41.2 tidak lagi menerima pembaruan keamanan. Ini pilihan yang wajar untuk
-pengembangan lokal, namun untuk membangun image yang akan dipakai di produksi sebaiknya
-gunakan mesin dengan Docker terkini (misalnya lewat CI/CD).
+Apa pun opsi yang dipilih, perintah pada bagian-bagian berikutnya berlaku sama.
+
+## Membangun image tanpa Docker di komputer Anda (CI/CD)
+
+Anda tidak perlu Docker terpasang untuk merilis image. Berkas
+`.github/workflows/docker.yml` membuat GitHub Actions membangun image setiap kali ada
+push ke `main`, lalu menyimpannya di GitHub Container Registry (GHCR).
+
+Pendekatan ini bukan sekadar jalan pintas ketika Docker tidak dapat dipasang; ia memang
+lebih baik untuk rilis. Build berjalan di lingkungan yang bersih dan sama setiap kali,
+tidak terpengaruh versi Node atau berkas `.env` di komputer masing-masing orang, dan
+setiap image punya jejak commit yang jelas.
+
+### Alur kerjanya
+
+1. Push ke `main` (atau buat tag `v1.0.0`).
+2. GitHub menjalankan pemeriksaan: `tsc`, `eslint`, `npm run build`, dan `npm audit`.
+3. Bila semua lolos, image dibangun dan didorong ke GHCR.
+4. Server produksi menarik image tersebut lalu menjalankannya.
+
+Pada pull request, pemeriksaan tetap berjalan namun image tidak didorong — sehingga PR
+tidak dapat merusak rilis.
+
+### Melihat hasilnya
+
+Buka tab **Actions** di repositori GitHub Anda untuk memantau prosesnya. Setelah selesai,
+image muncul di halaman **Packages** repositori dengan nama:
+
+```
+ghcr.io/kelvinj-01/fe-oasysschool:latest
+```
+
+Tag yang dihasilkan otomatis:
+
+- `latest` — commit terakhir di `main`
+- `main` — sama seperti di atas, dinamai sesuai branch
+- `sha-abc1234` — versi tepat dari sebuah commit, berguna untuk rollback
+- `1.0.0`, `1.0` — bila Anda membuat tag git `v1.0.0`
+
+### Mengatur alamat API untuk image hasil CI
+
+Karena variabel `VITE_*` dibaca saat build, alamat API ditentukan lewat pengaturan
+repositori, bukan saat kontainer dijalankan.
+
+Buka **Settings → Secrets and variables → Actions → Variables**, lalu tambahkan:
+
+| Nama | Contoh nilai |
+| --- | --- |
+| `VITE_API_BASE_URL` | `https://api.sekolah-anda.sch.id/api/v1` |
+| `VITE_APP_NAME` | `Oasys School Dashboard` |
+
+Bila `VITE_API_BASE_URL` tidak diisi, workflow memakai `/api/v1` (alamat relatif), yang
+cocok bila nginx meneruskan `/api/` ke backend — lihat bagian proxy di bawah.
+
+Untuk nilai rahasia seperti `VITE_SENTRY_DSN`, gunakan **Secrets**, bukan Variables.
+
+### Menjalankan image di server
+
+Di server mana pun yang punya Docker (VPS Linux, server sekolah, layanan kontainer):
+
+```bash
+docker login ghcr.io -u USERNAME_GITHUB_ANDA
+docker pull ghcr.io/kelvinj-01/fe-oasysschool:latest
+docker run -d --name oasys-dashboard -p 80:80 --restart unless-stopped \
+  ghcr.io/kelvinj-01/fe-oasysschool:latest
+```
+
+Untuk login, buat Personal Access Token di GitHub dengan cakupan `read:packages`.
+
+Image bersifat privat mengikuti repositori. Bila ingin dapat ditarik tanpa login, ubah
+visibilitasnya menjadi publik di halaman Packages.
 
 ## Cara tercepat: Docker Compose
 
@@ -213,7 +361,30 @@ Berkasnya tidak rusak — versi macOS Anda yang tidak didukung installer tersebu
 macOS 12 Monterey, gunakan Docker Desktop 4.41.2.
 
 **`docker: 'compose' is not a docker command`**
-Compose v2 belum tersedia (Docker Anda terlalu tua). Setelah memasang 4.41.2, perintah
-`docker compose` akan dikenali. Sebagai alternatif sementara, `docker-compose` dengan
-tanda hubung dapat dipakai bila Compose v1 terpasang, namun `docker-compose.yml` di
-repositori ini ditulis untuk format Compose v2.
+Compose v2 belum tersedia (Docker Anda terlalu tua). Setelah memasang Colima beserta
+paket `docker-compose`, atau Docker Desktop 4.41.2, perintah `docker compose` akan
+dikenali. `docker-compose.yml` di repositori ini ditulis untuk format Compose v2.
+
+### Khusus Colima
+
+**`Cannot connect to the Docker daemon` padahal Colima sudah dipasang**
+Mesin Colima belum dijalankan, atau berhenti setelah Mac dinyalakan ulang. Jalankan
+`colima start`, lalu periksa dengan `colima status`.
+
+**`docker-credential-osxkeychain: executable file not found`**
+Konfigurasi Docker masih menunjuk credential helper bawaan Docker Desktop, yang tidak
+tersedia pada pemasangan CLI-saja. Buka `~/.docker/config.json` lalu hapus baris
+`"credsStore": "osxkeychain"`, simpan, dan ulangi perintah.
+
+**Homebrew gagal memasang karena biner Docker yang bentrok**
+Sisa pemasangan Docker Desktop lama (misalnya `/usr/local/bin/hub-tool` yang menunjuk
+`/Applications/Docker.app` yang sudah dihapus). Bersihkan sisa biner seperti pada langkah
+1 opsi Colima, lalu ulangi `brew install`.
+
+**Build terasa lambat atau kehabisan memori**
+VM bawaan Colima hanya 2 CPU dan 2 GB memori. Buat ulang dengan alokasi lebih besar:
+
+```bash
+colima delete
+colima start --cpu 4 --memory 8
+```

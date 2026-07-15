@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Users } from 'lucide-react';
 import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
 import { Skeleton } from '../common/Skeleton';
@@ -15,24 +15,21 @@ const SEGMENTS: Array<{ key: StatKey; label: string; bar: string; dot: string }>
 ];
 
 export function AttendanceSummaryCards() {
-  const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const summaryQuery = useQuery({
+    queryKey: ['dashboard-summary'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<DashboardSummaryResponse>('/dashboard/summary');
+      return data;
+    },
+  });
 
-  useEffect(() => {
-    apiClient
-      .get<DashboardSummaryResponse>('/dashboard/summary')
-      .then((res) => setSummary(res.data))
-      .catch((err) => {
-        const code = getApiErrorCode(err);
-        setErrorMessage(
-          code === 'NO_ACTIVE_ACADEMIC_TERM'
-            ? 'Sekolah Anda belum punya tahun ajaran yang aktif. Silakan hubungi Tim Pengembang untuk mengaktifkannya.'
-            : getApiErrorMessage(err, 'Gagal memuat ringkasan presensi.'),
-        );
-      })
-      .finally(() => setIsLoading(false));
-  }, []);
+  const summary = summaryQuery.data ?? null;
+  const isLoading = summaryQuery.isPending;
+  const errorMessage = summaryQuery.isError
+    ? getApiErrorCode(summaryQuery.error) === 'NO_ACTIVE_ACADEMIC_TERM'
+      ? 'Sekolah Anda belum punya tahun ajaran yang aktif. Silakan hubungi Tim Pengembang untuk mengaktifkannya.'
+      : getApiErrorMessage(summaryQuery.error, 'Gagal memuat ringkasan presensi.')
+    : null;
 
   if (isLoading) {
     return <Skeleton className="h-[220px] rounded-2xl" />;

@@ -1,17 +1,20 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Search, Plus, Upload, Mail } from 'lucide-react';
-import { apiClient, getApiErrorMessage } from '../../lib/apiClient';
+import { getApiErrorMessage } from '../../lib/apiClient';
+import { useQueryClient } from '@tanstack/react-query';
+import { useDirectoryQuery, useTeacherMutations } from '../../hooks/queries/useDirectory';
 import { useToast } from '../../hooks/useToast';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { env } from '../../config/env';
-import { toTitleCase, toSentenceCase, validatePersonName } from '../../lib/format';
+import { toTitleCase, toSentenceCase } from '../../lib/format';
+import { teacherSchema, inviteTeacherSchema } from '../../lib/schemas';
+import { parseFormData, firstError } from '../../lib/validateForm';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { ActionIcons } from '../../components/common/ActionIcons';
 import { ImportModal } from '../../components/common/ImportModal';
 import { Spinner } from '../../components/common/Spinner';
 import { Modal } from '../../components/ui/modal';
 import { useModal } from '../../hooks/useModal';
-import type { PaginatedResponse } from '../../types/api';
 import type { UserDirectoryEntry, CreateTeacherRequest, EmploymentStatus } from '../../types/dataMaster';
 import { EMPLOYMENT_STATUS_LABEL } from '../../types/dataMaster';
 
@@ -20,13 +23,23 @@ const labelCls = 'mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text
 
 export default function TeachersPage() {
   const { toast } = useToast();
-  const [items, setItems] = useState<UserDirectoryEntry[]>([]);
+  const queryClient = useQueryClient();
   const [pageNumber, setPageNumber] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, 400);
+
+  const directoryQuery = useDirectoryQuery({
+    role: 'teacher',
+    page: pageNumber,
+    pageSize: env.defaultPageSize,
+    search: debouncedSearch || undefined,
+  });
+  const items = directoryQuery.data?.items ?? [];
+  const totalPages = directoryQuery.data?.totalPages ?? 1;
+  const isLoading = directoryQuery.isPending;
+  const listError = directoryQuery.isError
+    ? getApiErrorMessage(directoryQuery.error, 'Gagal memuat data guru.')
+    : null;
 
   const [active, setActive] = useState<UserDirectoryEntry | null>(null);
   const { isOpen: isFormOpen, openModal: openFormModal, closeModal: closeFormModal } = useModal();
@@ -34,28 +47,9 @@ export default function TeachersPage() {
   const { isOpen: isInviteOpen, openModal: openInviteModal, closeModal: closeInviteModal } = useModal();
   const { isOpen: isImportOpen, openModal: openImportModal, closeModal: closeImportModal } = useModal();
 
-  const load = useCallback(() => {
-    setIsLoading(true);
-    setListError(null);
-    apiClient
-      .get<PaginatedResponse<UserDirectoryEntry>>('/users', {
-        params: { role: 'teacher', page: pageNumber, pageSize: env.defaultPageSize, search: debouncedSearch || undefined },
-      })
-      .then((res) => {
-        setItems(res.data.items);
-        setTotalPages(res.data.totalPages);
-      })
-      .catch((err) => setListError(getApiErrorMessage(err, 'Gagal memuat data guru.')))
-      .finally(() => setIsLoading(false));
-  }, [pageNumber, debouncedSearch]);
-
   useEffect(() => {
     setPageNumber(1);
   }, [debouncedSearch]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   const columns: Column<UserDirectoryEntry>[] = [
     {
@@ -173,7 +167,6 @@ export default function TeachersPage() {
         onSaved={() => {
           closeFormModal();
           toast.success(active ? 'Data guru berhasil diubah.' : 'Data guru berhasil ditambahkan.');
-          load();
         }}
       />
 
@@ -196,7 +189,7 @@ export default function TeachersPage() {
         onImported={(result) => {
           closeImportModal();
           toast.success(result.message);
-          load();
+          void queryClient.invalidateQueries({ queryKey: ['directory'] });
         }}
       />
 
@@ -258,6 +251,7 @@ function TeacherFormModal({ isOpen, onClose, teacher, onSaved }: { isOpen: boole
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { create, update } = useTeacherMutations();
 
   useEffect(() => {
     setForm({
@@ -285,22 +279,18 @@ function TeacherFormModal({ isOpen, onClose, teacher, onSaved }: { isOpen: boole
     e.preventDefault();
     setError(null);
 
-    const nameError = validatePersonName(form.fullName);
-    if (nameError) { setError(`Nama Lengkap: ${nameError}`); return; }
-    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) { setError('Format email tidak valid.'); return; }
-
-    if (form.nip && !/^\d{18}$/.test(form.nip)) {
-      setError('NIP harus terdiri dari 18 digit angka.');
-      return;
-    }
-    if (form.nip && !isPnsLike) {
-      setError('NIP hanya berlaku untuk status kepegawaian PNS atau PPPK.');
-      return;
-    }
-    if (form.nuptk && !/^\d{16}$/.test(form.nuptk)) {
-      setError('NUPTK harus terdiri dari 16 digit angka.');
-      return;
-    }
+    const parsed = parseFormData(teacherSchema, {
+      fullName: form.fullName,
+      email: form.email,
+      phone: form.phone || undefined,
+      nip: form.nip || undefined,
+      nuptk: form.nuptk || undefined,
+      employmentStatus: form.employmentStatus || undefined,
+      expertiseField: form.expertiseField || undefined,
+      expertiseType: form.expertiseType || undefined,
+      address: form.address || undefined,
+    });
+    if (!parsed.success) { setError(firstError(parsed.errors)); return; }
 
     setIsSubmitting(true);
     const payload: CreateTeacherRequest & { accountStatus?: 'active' | 'suspended' } = {
@@ -316,9 +306,9 @@ function TeacherFormModal({ isOpen, onClose, teacher, onSaved }: { isOpen: boole
     };
     try {
       if (isEdit && teacher) {
-        await apiClient.patch(`/teachers/${teacher.id}`, { ...payload, accountStatus: form.accountStatus });
+        await update.mutateAsync({ id: teacher.id, payload: { ...payload, accountStatus: form.accountStatus } });
       } else {
-        await apiClient.post('/teachers', payload);
+        await create.mutateAsync(payload);
       }
       onSaved();
     } catch (err) {
@@ -410,6 +400,7 @@ function InviteTeacherModal({ isOpen, onClose, onSent }: { isOpen: boolean; onCl
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const { invite } = useTeacherMutations();
 
   useEffect(() => {
     setEmail('');
@@ -419,13 +410,14 @@ function InviteTeacherModal({ isOpen, onClose, onSent }: { isOpen: boolean; onCl
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-      setError('Format email tidak valid.');
+    const parsed = parseFormData(inviteTeacherSchema, { email });
+    if (!parsed.success) {
+      setError(firstError(parsed.errors));
       return;
     }
     setIsSending(true);
     try {
-      const { data } = await apiClient.post<{ message: string }>('/teachers/invitations', { email: email.trim().toLowerCase() });
+      const data = await invite.mutateAsync(email.trim().toLowerCase());
       onSent(data.message);
     } catch (err) {
       setError(getApiErrorMessage(err, 'Gagal mengirim undangan.'));

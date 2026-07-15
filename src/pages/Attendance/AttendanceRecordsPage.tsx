@@ -1,26 +1,30 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Pencil, History, CircleCheck, Thermometer, FileText, CircleX } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import { useAuth } from '../../hooks/useAuth';
-import { getAllClasses } from '../../services/classesService';
-import { getAllSubjects } from '../../services/subjectsService';
-import { env } from '../../config/env';
+import { useAllClassesQuery, useAllSubjectsQuery } from '../../hooks/queries/useFilters';
+import {
+  useAttendanceRecordsQuery,
+  useAttendanceHistoryQuery,
+  useAttendanceMutations,
+  useClassStudentsQuery,
+  useClassSchedulesQuery,
+  useStaffDirectoryQuery,
+} from '../../hooks/queries/useAttendance';
 import { Spinner } from '../../components/common/Spinner';
 import { DatePicker } from '../../components/common/DatePicker';
 import { todayIso } from '../../lib/dateUtils';
 import { Download } from 'lucide-react';
 import { ReportsExportFilter } from '../../components/reports/ReportsExportFilter';
-import { apiClient, getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
+import { getApiErrorCode, getApiErrorMessage } from '../../lib/apiClient';
 import { DataTable, type Column } from '../../components/common/DataTable';
 import { Skeleton } from '../../components/common/Skeleton';
 import { Modal } from '../../components/ui/modal';
 import { useModal } from '../../hooks/useModal';
 import PageMeta from '../../components/common/PageMeta';
 import PageBreadCrumb from '../../components/common/PageBreadCrumb';
-import type { PaginatedResponse } from '../../types/api';
-import type { AttendanceRecord, AttendanceStatus, ClassEntity, Schedule, Student, Subject } from '../../types/entities';
-import type { UserDirectoryEntry } from '../../types/dataMaster';
-import type { UpdateAttendanceStatusRequest, AttendanceHistoryResponse } from '../../types/attendance';
+import type { AttendanceRecord, AttendanceStatus } from '../../types/entities';
+import type { UpdateAttendanceStatusRequest } from '../../types/attendance';
 
 const ROLE_LABEL: Record<string, string> = {
   administrator: 'Administrator',
@@ -42,93 +46,52 @@ export default function AttendanceRecordsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const [classes, setClasses] = useState<ClassEntity[]>([]);
   const [classId, setClassId] = useState('');
   const [subjectId, setSubjectId] = useState('');
   const [sessionDate, setSessionDate] = useState(todayIso());
   const { isOpen: isExportOpen, openModal: openExportModal, closeModal: closeExportModal } = useModal();
   const [statusFilter, setStatusFilter] = useState('');
 
-  const [students, setStudents] = useState<Student[]>([]);
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [teachers, setTeachers] = useState<UserDirectoryEntry[]>([]);
-  const [administrators, setAdministrators] = useState<UserDirectoryEntry[]>([]);
 
-  const [items, setItems] = useState<AttendanceRecord[]>([]);
   const [pageNumber, setPageNumber] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [listError, setListError] = useState<string | null>(null);
 
   const { isOpen: isCorrectOpen, openModal: openCorrectModal, closeModal: closeCorrectModal } = useModal();
   const { isOpen: isHistoryOpen, openModal: openHistoryModal, closeModal: closeHistoryModal } = useModal();
   const [activeRecord, setActiveRecord] = useState<AttendanceRecord | null>(null);
 
-  const loadFilters = useCallback(() => {
-    getAllClasses()
-      .then((items) => setClasses(items)).catch(() => setClasses([]));
-    getAllSubjects()
-      .then((items) => setSubjects(items)).catch(() => setSubjects([]));
-  }, []);
+  const classesQuery = useAllClassesQuery();
+  const subjectsQuery = useAllSubjectsQuery();
+  const classes = useMemo(() => classesQuery.data ?? [], [classesQuery.data]);
+  const subjects = useMemo(() => subjectsQuery.data ?? [], [subjectsQuery.data]);
 
-  useEffect(() => {
-    loadFilters();
+  const isAdmin = user?.role === 'administrator';
+  const teachersQuery = useStaffDirectoryQuery('teacher', isAdmin);
+  const administratorsQuery = useStaffDirectoryQuery('administrator', isAdmin);
+  const teachers = useMemo(() => teachersQuery.data ?? [], [teachersQuery.data]);
+  const administrators = useMemo(() => administratorsQuery.data ?? [], [administratorsQuery.data]);
 
-    if (user?.role === 'administrator') {
-      apiClient.get<PaginatedResponse<UserDirectoryEntry>>('/users', { params: { role: 'teacher', pageSize: env.maxPageSize } })
-        .then((res) => setTeachers(res.data.items)).catch(() => setTeachers([]));
-      apiClient.get<PaginatedResponse<UserDirectoryEntry>>('/users', { params: { role: 'administrator', pageSize: env.maxPageSize } })
-        .then((res) => setAdministrators(res.data.items)).catch(() => setAdministrators([]));
-    }
-  }, [user?.role, loadFilters]);
+  const studentsQuery = useClassStudentsQuery(classId);
+  const schedulesQuery = useClassSchedulesQuery(classId);
+  const students = useMemo(() => studentsQuery.data ?? [], [studentsQuery.data]);
+  const schedules = useMemo(() => schedulesQuery.data ?? [], [schedulesQuery.data]);
 
-  useEffect(() => {
-    function onFocus() { loadFilters(); }
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onFocus);
-    return () => {
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onFocus);
-    };
-  }, [loadFilters]);
-
-  useEffect(() => {
-    if (!classId) {
-      setStudents([]);
-      setSchedules([]);
-      return;
-    }
-    apiClient.get<PaginatedResponse<Student>>('/students', { params: { classId, pageSize: env.maxPageSize } })
-      .then((res) => setStudents(res.data.items)).catch(() => setStudents([]));
-    apiClient.get<PaginatedResponse<Schedule>>('/schedules', { params: { classId, pageSize: env.maxPageSize } })
-      .then((res) => setSchedules(res.data.items)).catch(() => setSchedules([]));
-  }, [classId]);
-
-  function load() {
-    if (!classId) return;
-    setIsLoading(true);
-    setListError(null);
-    apiClient
-      .get<PaginatedResponse<AttendanceRecord>>('/attendance-records', {
-        params: {
-          classId,
-          sessionDate,
-          subjectId: subjectId || undefined,
-          status: statusFilter || undefined,
-          page: pageNumber,
-          pageSize: PAGE_SIZE,
-        },
-      })
-      .then((res) => {
-        setItems(res.data.items);
-        setTotalPages(res.data.totalPages);
-      })
-      .catch((err) => setListError(getApiErrorMessage(err, 'Gagal memuat data presensi.')))
-      .finally(() => setIsLoading(false));
-  }
-
-  useEffect(load, [classId, sessionDate, subjectId, statusFilter, pageNumber]);
+  const recordsQuery = useAttendanceRecordsQuery(
+    {
+      classId,
+      sessionDate,
+      subjectId: subjectId || undefined,
+      status: statusFilter || undefined,
+      page: pageNumber,
+      pageSize: PAGE_SIZE,
+    },
+    Boolean(classId),
+  );
+  const items = recordsQuery.data?.items ?? [];
+  const totalPages = recordsQuery.data?.totalPages ?? 1;
+  const isLoading = Boolean(classId) && recordsQuery.isPending;
+  const listError = recordsQuery.isError
+    ? getApiErrorMessage(recordsQuery.error, 'Gagal memuat data presensi.')
+    : null;
 
   const studentById = useMemo(() => Object.fromEntries(students.map((s) => [s.id, s])), [students]);
   const scheduleById = useMemo(() => Object.fromEntries(schedules.map((s) => [s.id, s])), [schedules]);
@@ -290,7 +253,6 @@ export default function AttendanceRecordsPage() {
           onSaved={() => {
             closeCorrectModal();
             toast.success('Status presensi berhasil diubah.');
-            load();
           }}
         />
       )}
@@ -322,6 +284,7 @@ function CorrectStatusModal({
   onSaved: () => void;
 }) {
   const { toast } = useToast();
+  const { correctStatus } = useAttendanceMutations();
   const [status, setStatus] = useState<AttendanceStatus>('hadir');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -336,7 +299,7 @@ function CorrectStatusModal({
     setIsSubmitting(true);
     try {
       const payload: UpdateAttendanceStatusRequest = { status, previousStatus: record.status };
-      await apiClient.patch(`/attendance-records/${record.id}/status`, payload);
+      await correctStatus.mutateAsync({ recordId: record.id, payload });
       onSaved();
     } catch (err) {
       const code = getApiErrorCode(err);
@@ -399,20 +362,10 @@ function HistoryModal({
   studentName: string;
   staffNameById: Record<string, string>;
 }) {
-  const [history, setHistory] = useState<AttendanceHistoryResponse>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    setIsLoading(true);
-    setError(null);
-    apiClient
-      .get<AttendanceHistoryResponse>(`/attendance-records/${record.id}/history`)
-      .then((res) => setHistory(res.data))
-      .catch((err) => setError(getApiErrorMessage(err, 'Gagal memuat riwayat.')))
-      .finally(() => setIsLoading(false));
-  }, [isOpen, record.id]);
+  const historyQuery = useAttendanceHistoryQuery(isOpen ? record.id : null);
+  const history = historyQuery.data ?? [];
+  const isLoading = isOpen && historyQuery.isPending;
+  const error = historyQuery.isError ? getApiErrorMessage(historyQuery.error, 'Gagal memuat riwayat.') : null;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="m-4 max-w-md">

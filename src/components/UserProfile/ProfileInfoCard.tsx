@@ -3,7 +3,9 @@ import { CircleCheck, Clock, CircleX, Camera, Trash2 } from 'lucide-react';
 import { apiClient, getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '../../lib/apiClient';
 import { useToast } from '../../hooks/useToast';
 import { useAuth } from '../../hooks/useAuth';
-import { toTitleCase, validatePersonName } from '../../lib/format';
+import { toTitleCase } from '../../lib/format';
+import { profileSchema } from '../../lib/schemas';
+import { parseFormData } from '../../lib/validateForm';
 import { Avatar } from '../common/Avatar';
 import { OtpConfirmModal } from '../common/OtpConfirmModal';
 import { Skeleton } from '../common/Skeleton';
@@ -123,15 +125,12 @@ export function ProfileInfoCard() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    const errors: FieldErrors = {};
-    const cleanedName = fullName.replace(/\s+/g, ' ').trim();
-    const nameError = validatePersonName(cleanedName);
-    if (nameError) errors.fullName = nameError;
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) errors.email = 'Format email tidak valid.';
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
+    const parsed = parseFormData(profileSchema, { fullName, email, phone });
+    if (!parsed.success) {
+      setFieldErrors(parsed.errors);
       return;
     }
+    const cleanedName = parsed.data.fullName;
     setFieldErrors({});
     setIsSaving(true);
 
