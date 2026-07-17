@@ -1,27 +1,12 @@
-import { createContext, useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { CircleCheck, CircleX, Info, TriangleAlert, X } from 'lucide-react';
-
-type ToastVariant = 'success' | 'error' | 'info' | 'warning';
-
-interface ToastItem {
-  id: string;
-  variant: ToastVariant;
-  message: string;
-}
-
-interface ToastApi {
-  success: (message: string) => void;
-  error: (message: string) => void;
-  info: (message: string) => void;
-  warning: (message: string) => void;
-}
-
-interface ToastContextValue {
-  toast: ToastApi;
-}
-
-export const ToastContext = createContext<ToastContextValue | undefined>(undefined);
+import {
+  ToastContext,
+  type ToastApi,
+  type ToastItem,
+  type ToastVariant,
+} from './toastContextObject';
 
 const VARIANT_STYLE: Record<ToastVariant, { icon: ReactNode; className: string; role: 'status' | 'alert' }> = {
   success: { icon: <CircleCheck size={18} aria-hidden="true" />, className: 'border-success-200 bg-success-50 text-success-700', role: 'status' },

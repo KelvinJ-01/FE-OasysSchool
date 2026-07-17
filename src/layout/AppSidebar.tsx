@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { Link, useLocation } from "react-router";
 import { LayoutDashboard, Calendar, User, Database, ClipboardCheck, HandCoins } from "lucide-react";
 
-import { useSidebar } from "../context/SidebarContext";
+import { useSidebar } from "../hooks/useSidebar";
 import { useAuth } from "../hooks/useAuth";
 import type { UserRole } from "../types/entities";
 

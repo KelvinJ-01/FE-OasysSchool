@@ -1,4 +1,4 @@
-import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import { useToast } from '../hooks/useToast';
@@ -16,17 +16,7 @@ import {
   setAccessToken,
 } from '../lib/tokenStorage';
 import type { AuthUser, JwtPayload, LoginRequest, LoginResponse } from '../types/auth';
-
-interface AuthContextValue {
-  user: AuthUser | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  updateUser: (partial: Partial<AuthUser>) => void;
-}
-
-export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+import { AuthContext, type AuthContextValue } from './authContextObject';
 
 function decodeUserFromToken(token: string): AuthUser | null {
   try {
