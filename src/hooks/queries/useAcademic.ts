@@ -35,7 +35,7 @@ export function useClassMutations() {
   const queryClient = useQueryClient();
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['classes'] });
-    // Wali kelas menentukan cakupan kelas Guru pada filter Presensi & Ekspor.
+
     void queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
     void queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
   };
@@ -62,7 +62,7 @@ export function useSubjectMutations() {
   const queryClient = useQueryClient();
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['subjects'] });
-    // Guru pengampu menentukan cakupan mapel pada filter Presensi.
+
     void queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
   };
 

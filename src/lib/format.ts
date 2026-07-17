@@ -1,4 +1,3 @@
-
 export function toTitleCase(value: string): string {
   const minor = new Set(['dan', 'atau', 'di', 'ke', 'dari', 'yang', 'untuk', 'bin', 'binti', 'van', 'der']);
   return value
@@ -24,4 +23,3 @@ export function toSentenceCase(value: string): string {
   if (!trimmed) return trimmed;
   return trimmed[0].toUpperCase() + trimmed.slice(1);
 }
-

@@ -64,8 +64,11 @@ export function DatePicker({ value, onChange, ariaLabel = 'Pilih tanggal', class
     <div className={`relative ${className}`}>
       <span className="pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center text-gray-400">
         <CalendarDays size={16} aria-hidden="true" />
+
       </span>
+
       <input ref={inputRef} aria-label={ariaLabel} className="hidden" readOnly />
     </div>
+
   );
 }

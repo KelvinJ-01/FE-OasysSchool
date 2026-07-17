@@ -40,6 +40,7 @@ export function AttendanceSummaryCards() {
       <div role="alert" className="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700">
         {errorMessage ?? 'Ringkasan presensi tidak tersedia.'}
       </div>
+
     );
   }
 
@@ -54,14 +55,21 @@ export function AttendanceSummaryCards() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-theme-xs font-medium uppercase tracking-wide text-white/60">Tingkat Kehadiran Hari Ini</p>
+
             <p className="mt-2 flex items-baseline gap-2">
               <span className="text-[56px] font-semibold leading-none sm:text-[64px]">{rate}%</span>
+
               <span className="text-theme-sm text-white/70">{hadir} dari {total} siswa hadir</span>
+
             </p>
+
           </div>
+
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10">
             <Users size={22} aria-hidden="true" />
+
           </span>
+
         </div>
 
         <div className="mt-8 flex h-3.5 w-full overflow-hidden rounded-full bg-white/10" role="img" aria-label={`Proporsi status presensi: ${SEGMENTS.map((s) => `${s.label} ${summary.attendance[s.key]}`).join(', ')}`}>
@@ -71,17 +79,23 @@ export function AttendanceSummaryCards() {
             return <div key={s.key} className={s.bar} style={{ width: `${(count / total) * 100}%` }} />;
           })}
         </div>
+
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
           {SEGMENTS.map((s) => (
             <span key={s.key} className="flex items-center gap-1.5 text-theme-xs text-white/70">
               <span className={`size-2 rounded-full ${s.dot}`} aria-hidden="true" />
+
               {s.label} {summary.attendance[s.key]}
             </span>
+
           ))}
         </div>
+
         <p className="mt-4 text-theme-xs text-white/50">{scopeLabel} · {total} siswa aktif</p>
+
       </div>
 
     </div>
+
   );
 }

@@ -7,7 +7,9 @@ import type { AppNotification, NotificationsResponse, NotificationType } from '.
 
 const ICONS: Record<NotificationType, React.ReactNode> = {
   attendance: <CalendarCheck size={16} aria-hidden="true" />,
+
   account: <UserPlus size={16} aria-hidden="true" />,
+
   system: <Info size={16} aria-hidden="true" />,
 };
 
@@ -89,10 +91,14 @@ export default function NotificationDropdown() {
         {unreadCount > 0 && (
           <span className="absolute right-2 top-2 z-10 flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
+
             <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-400" />
+
           </span>
+
         )}
         <Bell size={20} aria-hidden="true" />
+
       </button>
 
       <Dropdown
@@ -103,10 +109,13 @@ export default function NotificationDropdown() {
         <div className="mb-2 flex items-center justify-between border-b border-gray-100 px-2 pb-3 dark:border-gray-800">
           <div>
             <h5 className="text-[15px] font-semibold text-gray-800 dark:text-gray-100">Notifikasi</h5>
+
             {unreadCount > 0 && (
               <p className="text-theme-xs text-gray-500 dark:text-gray-400">{unreadCount} belum dibaca</p>
+
             )}
           </div>
+
           {unreadCount > 0 && (
             <button
               type="button"
@@ -114,17 +123,21 @@ export default function NotificationDropdown() {
               className="flex items-center gap-1 text-theme-xs font-medium text-brand-500 hover:underline"
             >
               <CheckCheck size={14} aria-hidden="true" />
+
               Tandai semua
             </button>
+
           )}
         </div>
 
         <ul className="flex flex-col overflow-y-auto custom-scrollbar">
           {isLoading && items.length === 0 && (
             <li className="px-3 py-8 text-center text-theme-sm text-gray-400">Memuat notifikasi…</li>
+
           )}
           {!isLoading && items.length === 0 && (
             <li className="px-3 py-10 text-center text-theme-sm text-gray-400">Belum ada notifikasi.</li>
+
           )}
           {items.map((notif) => (
             <li key={notif.id}>
@@ -138,19 +151,31 @@ export default function NotificationDropdown() {
                 <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${ICON_TONE[notif.type]}`}>
                   {ICONS[notif.type]}
                 </span>
+
                 <span className="block min-w-0 flex-1">
                   <span className="flex items-center gap-2">
                     <span className="truncate text-theme-sm font-medium text-gray-800 dark:text-white/90">{notif.title}</span>
+
                     {!notif.read && <span className="size-2 shrink-0 rounded-full bg-brand-500" aria-label="Belum dibaca" />}
+
                   </span>
+
                   <span className="mt-0.5 block text-theme-xs leading-relaxed text-gray-500 dark:text-gray-400">{notif.body}</span>
+
                   <span className="mt-1 block text-theme-xs text-gray-400">{timeAgo(notif.createdAt)}</span>
+
                 </span>
+
               </button>
+
             </li>
+
           ))}
         </ul>
+
       </Dropdown>
+
     </div>
+
   );
 }

@@ -35,8 +35,10 @@ const AppHeader: React.FC = () => {
           >
             {isMobileOpen ? (
               <X size={24} aria-hidden="true" />
+
             ) : (
               <Menu size={22} aria-hidden="true" />
+
             )}
           </button>
 
@@ -50,7 +52,9 @@ const AppHeader: React.FC = () => {
             className="flex items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
           >
             <MoreHorizontal size={22} aria-hidden="true" />
+
           </button>
+
         </div>
 
         <div
@@ -62,10 +66,14 @@ const AppHeader: React.FC = () => {
             <ThemeToggleButton />
             <NotificationDropdown />
           </div>
+
           <UserDropdown />
         </div>
+
       </div>
+
     </header>
+
   );
 };
 

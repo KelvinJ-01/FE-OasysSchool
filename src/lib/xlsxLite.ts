@@ -1,4 +1,3 @@
-
 const EOCD_SIG = 0x06054b50;
 const CENTRAL_SIG = 0x02014b50;
 

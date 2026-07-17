@@ -39,9 +39,11 @@ export default function UserDropdown() {
       >
         <span className="mr-3">
           <Avatar fullName={displayName} photoUrl={user.photoUrl} size="sm" />
+
         </span>
 
         <span className="block mr-1 font-medium text-theme-sm">{displayName}</span>
+
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
@@ -60,7 +62,9 @@ export default function UserDropdown() {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
+
         </svg>
+
       </button>
 
       <Dropdown
@@ -70,14 +74,18 @@ export default function UserDropdown() {
       >
         <div className="flex items-center gap-3 px-1 pb-1">
           <Avatar fullName={displayName} photoUrl={user.photoUrl} size="md" />
+
           <div className="min-w-0">
             <span className="block truncate font-medium text-gray-700 text-theme-sm dark:text-gray-400">
               {displayName}
             </span>
+
             <span className="mt-0.5 block truncate text-theme-xs text-gray-500 dark:text-gray-400">
               {user.email ?? (ROLE_LABEL[user.role] ?? user.role)}
             </span>
+
           </div>
+
         </div>
 
         <ul className="flex flex-col gap-1 pt-4 pb-3 border-b border-gray-200 dark:border-gray-800">
@@ -93,9 +101,12 @@ export default function UserDropdown() {
                 className="text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
                 aria-hidden="true"
               />
+
               Profil Saya
             </DropdownItem>
+
           </li>
+
         </ul>
 
         <button
@@ -108,9 +119,13 @@ export default function UserDropdown() {
             className="text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
             aria-hidden="true"
           />
+
           Keluar
         </button>
+
       </Dropdown>
+
     </div>
+
   );
 }

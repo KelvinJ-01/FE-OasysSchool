@@ -15,12 +15,17 @@ export default function DonationLanding() {
         <header className="flex items-center justify-between px-6 py-6 sm:px-10">
           <Link to="/" className="flex items-center gap-2.5">
             <img src="/images/logo/Oasys_School_Logo_3.webp" alt="" className="h-7 w-7" aria-hidden="true" />
+
             <span className="text-[14px] font-medium text-gray-900">Oasys School</span>
+
           </Link>
+
           <Link to="/" className="flex items-center gap-1.5 text-[13px] font-medium text-gray-500 hover:text-gray-800">
             <ArrowLeft size={14} aria-hidden="true" />
+
             Beranda
           </Link>
+
         </header>
 
         <main className="mx-auto max-w-xl px-6 pb-24 pt-8 sm:px-10">
@@ -38,33 +43,46 @@ export default function DonationLanding() {
               Oasys School bukan produk dari perusahaan besar. Kami mengerjakannya langsung, satu fitur demi satu fitur,
               sambil mendengar masukan dari guru dan staf sekolah yang benar-benar memakainya setiap hari.
             </p>
+
             <p>
               Biaya server, waktu pengembangan, sampai perbaikan bug kecil yang bikin repot, semuanya butuh biaya dan
               tenaga. Kalau Oasys School pernah membuat pekerjaan Anda sedikit lebih ringan dan Anda ingin ikut menjaga
               proyek ini tetap berjalan, kontribusi sekecil apa pun sangat berarti buat kami.
             </p>
+
             <p>Tidak ada target maupun paksaan. Ini murni terbuka untuk siapa saja yang ingin membantu.</p>
+
           </div>
 
           <div className="mt-10 rounded-xl border border-gray-200 p-6">
             <div className="flex items-center gap-2.5">
               <Heart size={18} className="text-secondary-500" aria-hidden="true" />
+
               <h2 className="text-[15px] font-semibold text-gray-900">Cara berkontribusi</h2>
+
             </div>
 
             <div className="mt-5 space-y-3">
               <CopyField label="Nomor Rekening" value="90022284966" />
+
               <CopyField label="Cashtag Jenius" value="$oasysid" />
+
             </div>
 
             <p className="mt-4 text-[13px] text-gray-500">
               Atas nama <span className="font-medium text-gray-700">Arian Nurrifqhi</span>. Sungguh, terima kasih sudah membaca sampai di sini.
+
             </p>
+
           </div>
 
           <p className="mt-10 text-[14px] text-gray-400">Salam hangat, Tim Pengembang Oasys School</p>
+
         </main>
+
       </div>
+
     </>
+
   );
 }

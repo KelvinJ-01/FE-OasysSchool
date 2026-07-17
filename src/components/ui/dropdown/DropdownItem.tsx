@@ -35,6 +35,7 @@ export const DropdownItem: React.FC<DropdownItemProps> = ({
       <Link to={to} className={combinedClasses} onClick={handleClick}>
         {children}
       </Link>
+
     );
   }
 
@@ -42,5 +43,6 @@ export const DropdownItem: React.FC<DropdownItemProps> = ({
     <button onClick={handleClick} className={combinedClasses}>
       {children}
     </button>
+
   );
 };

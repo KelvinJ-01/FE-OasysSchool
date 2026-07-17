@@ -34,12 +34,17 @@ export function ConfirmDialog({
           {isDanger && (
             <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-error-50 text-error-600">
               <AlertTriangle size={22} aria-hidden="true" />
+
             </span>
+
           )}
           <div>
             <h3 className="pr-10 text-[15px] font-semibold text-gray-900 dark:text-white/90">{title}</h3>
+
             <p className="pr-6 mt-1.5 text-[13.5px] leading-relaxed text-gray-500 dark:text-gray-400">{description}</p>
+
           </div>
+
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
@@ -51,6 +56,7 @@ export function ConfirmDialog({
           >
             {cancelLabel}
           </button>
+
           <button
             type="button"
             onClick={onConfirm}
@@ -60,10 +66,15 @@ export function ConfirmDialog({
             }`}
           >
             {isProcessing && <Spinner size="sm" />}
+
             {confirmLabel}
           </button>
+
         </div>
+
       </div>
+
     </Modal>
+
   );
 }

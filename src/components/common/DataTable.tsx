@@ -40,9 +40,12 @@ export function DataTable<T>({
                 <th key={col.key} className={`whitespace-nowrap px-5 py-3 text-theme-xs font-medium uppercase text-gray-400 ${col.className ?? ''}`}>
                   {col.header}
                 </th>
+
               ))}
             </tr>
+
           </thead>
+
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {isLoading &&
               Array.from({ length: 5 }).map((_, i) => (
@@ -50,9 +53,12 @@ export function DataTable<T>({
                   {columns.map((col) => (
                     <td key={col.key} className="px-5 py-4">
                       <Skeleton className="h-4 w-24" />
+
                     </td>
+
                   ))}
                 </tr>
+
               ))}
 
             {!isLoading && rows.length === 0 && (
@@ -60,7 +66,9 @@ export function DataTable<T>({
                 <td colSpan={columns.length} className="px-5 py-10 text-center text-theme-sm text-gray-400">
                   {emptyMessage}
                 </td>
+
               </tr>
+
             )}
 
             {!isLoading &&
@@ -70,11 +78,15 @@ export function DataTable<T>({
                     <td key={col.key} className={`px-5 py-4 text-theme-sm text-gray-700 dark:text-gray-300 ${col.className ?? ''}`}>
                       {col.render(row)}
                     </td>
+
                   ))}
                 </tr>
+
               ))}
           </tbody>
+
         </table>
+
       </div>
 
       {!isLoading && totalPages > 1 && (
@@ -82,6 +94,7 @@ export function DataTable<T>({
           <span className="text-theme-xs text-gray-400">
             Halaman {pageNumber} dari {totalPages}
           </span>
+
           <div className="flex gap-2">
             <button
               type="button"
@@ -91,7 +104,9 @@ export function DataTable<T>({
               className="flex size-8 items-center justify-center rounded-md border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 disabled:opacity-40 dark:border-gray-800 dark:hover:bg-white/5"
             >
               <ChevronLeft size={16} aria-hidden="true" />
+
             </button>
+
             <button
               type="button"
               onClick={() => onPageChange(pageNumber + 1)}
@@ -100,10 +115,15 @@ export function DataTable<T>({
               className="flex size-8 items-center justify-center rounded-md border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 disabled:opacity-40 dark:border-gray-800 dark:hover:bg-white/5"
             >
               <ChevronRight size={16} aria-hidden="true" />
+
             </button>
+
           </div>
+
         </div>
+
       )}
     </div>
+
   );
 }

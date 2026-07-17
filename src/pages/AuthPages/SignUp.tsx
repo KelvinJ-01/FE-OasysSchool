@@ -6,9 +6,12 @@ export default function SignUp() {
   return (
     <>
       <PageMeta title="Daftar Orang Tua | Oasys School" description="Registrasi akun Orang Tua Oasys School" />
+
       <AuthPageLayout>
         <SignUpForm />
       </AuthPageLayout>
+
     </>
+
   );
 }

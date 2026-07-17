@@ -1,13 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseXlsxFile } from './xlsxLite';
 
-/**
- * Membangun berkas .xlsx minimal di dalam memori.
- *
- * Berkas .xlsx adalah arsip ZIP berisi XML. Agar tes tidak butuh dependensi
- * apa pun, entri ditulis dengan metode STORED (tanpa kompresi) — struktur ZIP
- * tetap sah dan pembaca kita menanganinya lewat jalur `method === 0`.
- */
 function makeXlsx(files: Record<string, string>): File {
   const encoder = new TextEncoder();
   const entries = Object.entries(files).map(([name, content]) => ({
@@ -41,7 +34,7 @@ function makeXlsx(files: Record<string, string>): File {
     const lv = new DataView(local.buffer);
     lv.setUint32(0, 0x04034b50, true);
     lv.setUint16(4, 20, true);
-    lv.setUint16(8, 0, true); // stored
+    lv.setUint16(8, 0, true);
     lv.setUint32(14, crc, true);
     lv.setUint32(18, entry.data.length, true);
     lv.setUint32(22, entry.data.length, true);
@@ -54,7 +47,7 @@ function makeXlsx(files: Record<string, string>): File {
     const cv = new DataView(central.buffer);
     cv.setUint32(0, 0x02014b50, true);
     cv.setUint16(6, 20, true);
-    cv.setUint16(10, 0, true); // stored
+    cv.setUint16(10, 0, true);
     cv.setUint32(16, crc, true);
     cv.setUint32(20, entry.data.length, true);
     cv.setUint32(24, entry.data.length, true);
@@ -126,7 +119,6 @@ describe('parseXlsxFile', () => {
   });
 
   it('mengisi lubang kolom yang dilewati Excel dengan string kosong', async () => {
-    // Kolom B sengaja tidak ada; C harus tetap di indeks 2.
     const xml = sheet('<row r="1"><c r="A1"><v>1</v></c><c r="C1"><v>3</v></c></row>');
     const rows = await parseXlsxFile(wrap(xml));
     expect(rows[0]).toEqual(['1', '', '3']);

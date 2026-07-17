@@ -92,6 +92,7 @@ export default function NewPasswordForm() {
   return (
     <div className="font-jakarta">
       <h1 className="text-[22px] font-semibold text-gray-900">Buat kata sandi baru</h1>
+
       <p className="mt-1.5 text-[14px] text-gray-500">
         Kata sandi baru harus berbeda dari kata sandi yang pernah digunakan sebelumnya
         {email ? <> untuk <span className="font-medium text-gray-700">{email}</span></> : ''}.
@@ -102,10 +103,13 @@ export default function NewPasswordForm() {
           <label htmlFor="password" className="mb-1.5 block text-[13.5px] font-medium text-gray-900">
             Kata sandi baru
           </label>
+
           <div className="relative">
             <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-gray-400">
               <Lock size={18} aria-hidden="true" />
+
             </span>
+
             <input
               id="password"
               type={showPassword ? 'text' : 'password'}
@@ -125,18 +129,24 @@ export default function NewPasswordForm() {
             >
               {showPassword ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
             </button>
+
           </div>
+
           {errors.password && <p className="mt-1.5 text-[12.5px] text-error-600">{errors.password}</p>}
+
         </div>
 
         <div>
           <label htmlFor="confirmPassword" className="mb-1.5 block text-[13.5px] font-medium text-gray-900">
             Konfirmasi kata sandi
           </label>
+
           <div className="relative">
             <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-gray-400">
               <Lock size={18} aria-hidden="true" />
+
             </span>
+
             <input
               id="confirmPassword"
               type={showConfirmPassword ? 'text' : 'password'}
@@ -156,8 +166,11 @@ export default function NewPasswordForm() {
             >
               {showConfirmPassword ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
             </button>
+
           </div>
+
           {errors.confirmPassword && <p className="mt-1.5 text-[12.5px] text-error-600">{errors.confirmPassword}</p>}
+
         </div>
 
         <button
@@ -168,23 +181,30 @@ export default function NewPasswordForm() {
           {isSubmitting ? (
             <>
               <Spinner size="sm" className="mr-2" />
+
               Menyimpan...
             </>
+
           ) : (
             'Simpan Kata Sandi'
           )}
         </button>
+
       </form>
 
       <Modal isOpen={isOpen} onClose={closeModal} className="m-4 max-w-[420px]">
         <div className="flex flex-col items-center px-2 py-6 text-center font-jakarta">
           <div className="mb-5 flex size-16 items-center justify-center rounded-full bg-secondary-50 text-secondary-600">
             <CircleCheck size={36} aria-hidden="true" />
+
           </div>
+
           <h4 className="mb-2 text-[18px] font-semibold text-gray-900">Kata sandi berhasil diubah</h4>
+
           <p className="mb-6 text-[14px] text-gray-500">
             Kata sandi akun Anda telah berhasil diperbarui. Silakan masuk kembali menggunakan kata sandi baru Anda.
           </p>
+
           <button
             type="button"
             onClick={handleGoToSignIn}
@@ -192,8 +212,12 @@ export default function NewPasswordForm() {
           >
             Masuk Sekarang
           </button>
+
         </div>
+
       </Modal>
+
     </div>
+
   );
 }

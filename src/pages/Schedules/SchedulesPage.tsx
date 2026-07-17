@@ -29,7 +29,6 @@ export default function SchedulesPage() {
   const { toast } = useToast();
   const isAdmin = user?.role === 'administrator';
 
-
   const [classFilter, setClassFilter] = useState('');
   const [termFilter, setTermFilter] = useState('');
   const [dateFilter, setDateFilter] = useState(todayIso);
@@ -139,6 +138,7 @@ export default function SchedulesPage() {
   return (
     <>
       <PageMeta title="Jadwal Pembelajaran | Oasys School" description="Kelola jadwal pembelajaran sekolah" />
+
       <PageBreadCrumb pageTitle="Jadwal Pembelajaran" />
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -149,25 +149,32 @@ export default function SchedulesPage() {
             className="h-10 rounded-md border border-gray-300 bg-white px-3 text-theme-sm text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
           >
             <option value="">Semua Tahun Ajaran</option>
+
             {academicTerms.map((t) => (
               <option key={t.id} value={t.id}>{t.yearLabel} · {t.semester === 'ganjil' ? 'Ganjil' : 'Genap'}{t.isActive ? ' (Aktif)' : ''}</option>
+
             ))}
           </select>
+
           <select
             value={classFilter}
             onChange={(e) => { setClassFilter(e.target.value); setPageNumber(1); }}
             className="h-10 rounded-md border border-gray-300 bg-white px-3 text-theme-sm text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
           >
             <option value="">Semua Kelas</option>
+
             {classes.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
+
             ))}
           </select>
+
           <DatePicker
             value={dateFilter}
             onChange={(v) => { setDateFilter(v); setPageNumber(1); }}
             ariaLabel="Filter tanggal jadwal"
           />
+
         </div>
 
         {isAdmin && (
@@ -177,8 +184,10 @@ export default function SchedulesPage() {
             className="flex h-10 items-center gap-1.5 rounded-md bg-brand-500 px-4 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600"
           >
             <Plus size={16} aria-hidden="true" />
+
             Tambah Jadwal
           </button>
+
         )}
       </div>
 
@@ -223,6 +232,7 @@ export default function SchedulesPage() {
         />
       )}
     </>
+
   );
 }
 
@@ -330,6 +340,7 @@ function ScheduleFormModal({
           <div role="alert" className="mb-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">
             {conflictError}
           </div>
+
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -338,20 +349,28 @@ function ScheduleFormModal({
               <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Tahun Ajaran<span aria-hidden="true" className="text-error-500"> *</span></label>
               <select required value={academicTermId} onChange={(e) => setAcademicTermId(e.target.value)} className={selectClass}>
                 <option value="">Pilih...</option>
+
                 {academicTerms.map((t) => (
                   <option key={t.id} value={t.id}>{t.yearLabel} · {t.semester === 'ganjil' ? 'Ganjil' : 'Genap'}</option>
+
                 ))}
               </select>
+
             </div>
+
             <div>
               <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Kelas<span aria-hidden="true" className="text-error-500"> *</span></label>
               <select required value={classId} onChange={(e) => setClassId(e.target.value)} className={selectClass}>
                 <option value="">Pilih...</option>
+
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
+
                 ))}
               </select>
+
             </div>
+
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -359,20 +378,28 @@ function ScheduleFormModal({
               <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Mata Pelajaran<span aria-hidden="true" className="text-error-500"> *</span></label>
               <select required value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className={selectClass}>
                 <option value="">Pilih...</option>
+
                 {subjects.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
+
                 ))}
               </select>
+
             </div>
+
             <div>
               <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Guru<span aria-hidden="true" className="text-error-500"> *</span></label>
               <select required value={teacherId} onChange={(e) => setTeacherId(e.target.value)} className={selectClass}>
                 <option value="">Pilih...</option>
+
                 {teachers.map((t) => (
                   <option key={t.id} value={t.id}>{t.fullName}</option>
+
                 ))}
               </select>
+
             </div>
+
           </div>
 
           <div>
@@ -383,6 +410,7 @@ function ScheduleFormModal({
               ariaLabel="Tanggal jadwal"
               className="w-full"
             />
+
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -390,27 +418,37 @@ function ScheduleFormModal({
               <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Jam Mulai<span aria-hidden="true" className="text-error-500"> *</span></label>
               <input type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} className={selectClass} />
             </div>
+
             <div>
               <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Jam Selesai<span aria-hidden="true" className="text-error-500"> *</span></label>
               <input type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className={selectClass} />
             </div>
+
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="h-10 rounded-md px-4 text-theme-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5">Batal</button>
+
             <button type="submit" disabled={isSubmitting} className="h-10 rounded-md bg-brand-500 px-5 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60">
               {isSubmitting ? (
                 <>
                   <Spinner size="sm" className="mr-2" />
+
                   Menyimpan...
                 </>
+
               ) : (
                 'Simpan'
               )}
             </button>
+
           </div>
+
         </form>
+
       </div>
+
     </Modal>
+
   );
 }

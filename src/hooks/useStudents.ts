@@ -35,9 +35,9 @@ export function useStudentMutations() {
   const qc = useQueryClient();
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ['students'] });
-    // Kolom "Jumlah Murid" pada Data Kelas dihitung dari siswa aktif.
+
     void qc.invalidateQueries({ queryKey: ['classes'] });
-    // Ringkasan Dashboard & daftar presensi bergantung pada daftar siswa.
+
     void qc.invalidateQueries({ queryKey: ['attendance-records'] });
     void qc.invalidateQueries({ queryKey: ['dashboard-summary'] });
   };

@@ -20,8 +20,6 @@ function normalizeHeader(h: string): string {
 
 function enumNormalizer(label: string, map: Record<string, string[]>): NonNullable<ImportFieldSpec['normalize']> {
   return (raw) => {
-    // Pertahankan ANGKA: sejumlah singkatan resmi memuat angka, mis. "P3K"
-    // untuk PPPK. Membuang angka membuat alias semacam itu tak pernah cocok.
     const cleaned = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
     for (const [canonical, variants] of Object.entries(map)) {
       if (variants.some((v) => cleaned === v)) return { value: canonical };

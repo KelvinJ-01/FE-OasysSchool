@@ -51,11 +51,10 @@ export function useScheduleMutations() {
   const queryClient = useQueryClient();
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['schedules'] });
-    // Cakupan kelas & mata pelajaran seorang Guru diturunkan dari jadwal
-    // mengajarnya, jadi mengubah jadwal ikut menyegarkan keduanya.
+
     void queryClient.invalidateQueries({ queryKey: ['classes'] });
     void queryClient.invalidateQueries({ queryKey: ['subjects'] });
-    // Presensi memakai jadwal untuk menentukan sesi & cakupan baris.
+
     void queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
     void queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
   };

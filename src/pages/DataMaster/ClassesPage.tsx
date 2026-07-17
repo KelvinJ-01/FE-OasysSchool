@@ -42,7 +42,6 @@ export default function ClassesPage() {
   const { isOpen: isImportOpen, openModal: openImportModal, closeModal: closeImportModal } = useModal();
   const [editing, setEditing] = useState<ClassEntity | null>(null);
 
-
   async function confirmDelete() {
     if (!pendingDelete) return;
     try {
@@ -57,6 +56,7 @@ export default function ClassesPage() {
 
   const columns: Column<ClassEntity>[] = [
     { key: 'name', header: 'Nama Kelas', render: (c) => <span className="font-medium text-gray-800 dark:text-white/90">{c.name}</span> },
+
     { key: 'educationLevel', header: 'Jenjang', render: (c) => (c.educationLevel ? EDUCATION_LEVEL_LABEL[c.educationLevel] : '—') },
     { key: 'gradeLevel', header: 'Tingkat', render: (c) => c.gradeLevel ?? '—' },
     { key: 'studentCount', header: 'Jumlah Murid', render: (c) => (c.studentCount !== undefined ? `${c.studentCount} siswa` : '—') },
@@ -89,17 +89,22 @@ export default function ClassesPage() {
             className="flex h-10 items-center gap-1.5 rounded-md border border-gray-300 bg-white px-4 text-theme-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5"
           >
             <Upload size={16} aria-hidden="true" />
+
             Impor
           </button>
+
           <button
             type="button"
             onClick={() => { setEditing(null); openModal(); }}
             className="flex h-10 items-center gap-1.5 rounded-md bg-brand-500 px-4 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600"
           >
             <Plus size={16} aria-hidden="true" />
+
             Tambah Kelas
           </button>
+
         </div>
+
       )}
 
       {listError && <div role="alert" className="mb-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">{listError}</div>}
@@ -149,6 +154,7 @@ export default function ClassesPage() {
         onCancel={() => setPendingDelete(null)}
       />
     </div>
+
   );
 }
 
@@ -209,7 +215,9 @@ function ClassFormModal({ isOpen, onClose, cls, onSaved }: { isOpen: boolean; on
     <Modal isOpen={isOpen} onClose={onClose} className="m-4 max-w-md">
       <div className="p-6">
         <h3 className="mb-5 pr-10 text-theme-sm font-semibold text-gray-800 dark:text-white/90">{isEdit ? 'Ubah Kelas' : 'Tambah Kelas'}</h3>
+
         {error && <div role="alert" className="mb-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">{error}</div>}
+
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
             <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Nama Kelas<span aria-hidden="true" className="text-error-500"> *</span></label>
@@ -222,7 +230,9 @@ function ClassFormModal({ isOpen, onClose, cls, onSaved }: { isOpen: boolean; on
               placeholder="mis. 7A, XII IPA 1"
               className="h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 text-[14px] text-gray-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             />
+
           </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Jenjang<span aria-hidden="true" className="text-error-500"> *</span></label>
@@ -232,13 +242,18 @@ function ClassFormModal({ isOpen, onClose, cls, onSaved }: { isOpen: boolean; on
                 className="h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 text-[14px] text-gray-900 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
               >
                 <option value="">Pilih jenjang</option>
+
                 {(Object.keys(EDUCATION_LEVEL_LABEL) as EducationLevel[]).map((lv) => (
                   <option key={lv} value={lv}>{EDUCATION_LEVEL_LABEL[lv]}</option>
+
                 ))}
               </select>
+
             </div>
+
             <div>
               <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Tingkat</label>
+
               <select
                 value={gradeLevel}
                 onChange={(e) => setGradeLevel(e.target.value)}
@@ -246,40 +261,58 @@ function ClassFormModal({ isOpen, onClose, cls, onSaved }: { isOpen: boolean; on
                 className="h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 text-[14px] text-gray-900 outline-none focus:border-brand-500 disabled:cursor-not-allowed disabled:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-white/5"
               >
                 <option value="">{educationLevel ? 'Pilih tingkat' : 'Pilih jenjang dahulu'}</option>
+
                 {educationLevel && GRADE_OPTIONS[educationLevel].map((g) => (
                   <option key={g} value={g}>{g}</option>
+
                 ))}
               </select>
+
             </div>
+
           </div>
+
           <div>
             <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Wali Kelas</label>
+
             <select
               value={homeroomTeacherId}
               onChange={(e) => setHomeroomTeacherId(e.target.value)}
               className="h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 text-[14px] text-gray-900 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             >
               <option value="">Belum ditentukan</option>
+
               {teachers.map((t) => (
                 <option key={t.id} value={t.id}>{t.fullName}</option>
+
               ))}
             </select>
+
           </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="h-10 rounded-md px-4 text-theme-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5">Batal</button>
+
             <button type="submit" disabled={isSubmitting} className="h-10 rounded-md bg-brand-500 px-5 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60">
               {isSubmitting ? (
                 <>
                   <Spinner size="sm" className="mr-2" />
+
                   Menyimpan...
                 </>
+
               ) : (
                 'Simpan'
               )}
             </button>
+
           </div>
+
         </form>
+
       </div>
+
     </Modal>
+
   );
 }

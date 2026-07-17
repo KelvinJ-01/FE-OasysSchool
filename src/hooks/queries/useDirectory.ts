@@ -18,8 +18,7 @@ function useInvalidateDirectory() {
   const queryClient = useQueryClient();
   return () => {
     void queryClient.invalidateQueries({ queryKey: ['directory'] });
-    // Nama guru tampil sebagai Wali Kelas, Guru Pengampu, dan kolom Guru pada
-    // jadwal — semuanya di-join server, jadi ikut disegarkan.
+
     void queryClient.invalidateQueries({ queryKey: ['classes'] });
     void queryClient.invalidateQueries({ queryKey: ['subjects'] });
     void queryClient.invalidateQueries({ queryKey: ['schedules'] });

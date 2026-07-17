@@ -32,13 +32,9 @@ export function ReportsExportFilter() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-
-
     apiClient.get<PaginatedResponse<AcademicTerm>>('/academic-terms', { params: { pageSize: env.maxPageSize } })
       .then((res) => setTerms(res.data.items))
       .catch(() => setTerms([]));
-
-
   }, [user?.role]);
 
   const isClassRequired = isTeacher;
@@ -95,7 +91,9 @@ export function ReportsExportFilter() {
       <div>
         <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90" htmlFor="academicTermId">
           Semester &amp; Tahun Ajaran <span className="text-error-500">*</span>
+
         </label>
+
         <select
           id="academicTermId"
           className={selectClass}
@@ -103,10 +101,13 @@ export function ReportsExportFilter() {
           onChange={(e) => setAcademicTermId(e.target.value)}
         >
           <option value="">Pilih semester...</option>
+
           {terms.map((t) => (
             <option key={t.id} value={t.id}>{termLabel(t)}</option>
+
           ))}
         </select>
+
       </div>
 
       <div>
@@ -114,10 +115,13 @@ export function ReportsExportFilter() {
           Kelas{' '}
           {isClassRequired ? (
             <span className="text-error-500">*</span>
+
           ) : (
             <span className="text-theme-xs font-normal text-gray-400">(opsional — kosongkan untuk seluruh sekolah)</span>
+
           )}
         </label>
+
         <select
           id="classId"
           className={selectClass}
@@ -125,17 +129,22 @@ export function ReportsExportFilter() {
           onChange={(e) => setClassId(e.target.value)}
         >
           <option value="">{isClassRequired ? 'Pilih kelas yang Anda ampu...' : 'Seluruh sekolah'}</option>
+
           {classes.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
+
           ))}
         </select>
+
       </div>
 
       <div>
         <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90" htmlFor="subjectId">
           Mata Pelajaran{' '}
           <span className="text-theme-xs font-normal text-gray-400">(opsional — kosongkan untuk semua mapel)</span>
+
         </label>
+
         <select
           id="subjectId"
           className={selectClass}
@@ -143,28 +152,38 @@ export function ReportsExportFilter() {
           onChange={(e) => setSubjectId(e.target.value)}
         >
           <option value="">Semua Mata Pelajaran</option>
+
           {subjects.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
+
           ))}
         </select>
+
       </div>
 
       <div>
         <span className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Format</span>
+
         <div className="flex gap-4">
           <label className="flex items-center gap-2 text-[14px] text-gray-700 dark:text-gray-300">
             <input type="radio" checked={format === 'xlsx'} onChange={() => setFormat('xlsx')} className="text-brand-500 focus:ring-brand-500/30" />
+
             Excel (.xlsx)
           </label>
+
           <label className="flex items-center gap-2 text-[14px] text-gray-700 dark:text-gray-300">
             <input type="radio" checked={format === 'csv'} onChange={() => setFormat('csv')} className="text-brand-500 focus:ring-brand-500/30" />
+
             CSV (.csv)
           </label>
+
         </div>
+
       </div>
 
       {errorMessage && (
         <p className="text-[13.5px] text-error-600" role="alert">{errorMessage}</p>
+
       )}
 
       <button
@@ -176,12 +195,16 @@ export function ReportsExportFilter() {
         {isSubmitting ? (
           <>
             <Spinner size="sm" className="mr-2" />
+
             Mengekspor...
           </>
+
         ) : (
           'Ekspor Laporan'
         )}
       </button>
+
     </div>
+
   );
 }

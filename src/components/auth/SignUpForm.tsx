@@ -99,11 +99,13 @@ export function SignUpForm() {
   return (
     <div className="font-jakarta">
       <h1 className="text-[22px] font-semibold text-gray-900">Daftar sebagai orang tua</h1>
+
       <p className="mt-1.5 text-[14px] text-gray-500">Pantau presensi dan info akademik anak Anda.</p>
 
       <div className="mt-5 rounded-md border border-brand-100 bg-brand-25 px-3.5 py-3 text-[13px] leading-relaxed text-brand-700">
         Setelah email terverifikasi, akun ini hanya dapat digunakan di{' '}
         <span className="font-medium">Aplikasi Mobile Oasys School</span> — pendaftaran boleh lewat sini, tapi
+
         pemakaian sehari-hari lewat aplikasi.
       </div>
 
@@ -184,20 +186,26 @@ export function SignUpForm() {
               disabled={!policyVersion}
               className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500/30"
             />
+
             <span>
               Saya menyetujui{' '}
               <Link to="/privacy-policy" target="_blank" className="font-medium text-brand-500 hover:underline">
                 Kebijakan Privasi{policyVersion ? ` (v${policyVersion})` : ''}
               </Link>{' '}
+
               dan pemrosesan data anak saya untuk keperluan presensi sekolah.
             </span>
+
           </label>
+
           {policyLoadError && (
             <p className="mt-1.5 text-[12.5px] text-error-600">
               Gagal memuat kebijakan privasi. Muat ulang halaman untuk mencoba lagi.
             </p>
+
           )}
           {fieldErrors.consent && <p className="mt-1.5 text-[12.5px] text-error-600">{fieldErrors.consent}</p>}
+
         </div>
 
         <button
@@ -208,14 +216,19 @@ export function SignUpForm() {
           {isSubmitting ? (
             <>
               <Spinner size="sm" className="mr-2" />
+
               Memproses...
             </>
+
           ) : (
             'Daftar'
           )}
         </button>
+
       </form>
+
     </div>
+
   );
 }
 
@@ -247,13 +260,18 @@ function Field({
       <label htmlFor={htmlFor} className="mb-1.5 block text-[13.5px] font-medium text-gray-900">
         {label}
         {required && <span aria-hidden="true" className="text-error-500"> *</span>}
+
       </label>
+
       {children}
       {error ? (
         <p className="mt-1.5 text-[12.5px] text-error-600">{error}</p>
+
       ) : helper ? (
         <p className="mt-1.5 text-[12.5px] text-gray-500">{helper}</p>
+
       ) : null}
     </div>
+
   );
 }

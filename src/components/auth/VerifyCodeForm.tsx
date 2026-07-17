@@ -147,35 +147,46 @@ export default function VerifyCodeForm() {
       <div className="font-jakarta text-center">
         <div className="mx-auto mb-5 flex size-16 items-center justify-center rounded-full bg-secondary-50 text-secondary-600">
           <CircleCheck size={36} aria-hidden="true" />
+
         </div>
+
         <h1 className="text-[20px] font-semibold text-gray-900">Email berhasil diverifikasi</h1>
+
         <p className="mt-2 text-[14px] leading-relaxed text-gray-500">
           Satu langkah lagi: akun <span className="font-medium text-gray-700">{verifiedEmail}</span> kini menunggu
+
           persetujuan Admin sekolah. Setelah disetujui, Anda akan menerima email pemberitahuan dan bisa langsung login
           lewat <span className="font-medium text-gray-900">Aplikasi Mobile Oasys School</span>.
+
         </p>
+
         <Link
           to="/"
           className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-md bg-brand-500 text-[14px] font-medium text-white transition-colors hover:bg-brand-600"
         >
           Kembali ke beranda
         </Link>
+
       </div>
+
     );
   }
 
   return (
     <div className="font-jakarta">
       <h1 className="text-[22px] font-semibold text-gray-900">Verifikasi kode</h1>
+
       <p className="mt-1.5 text-[14px] text-gray-500">
         Masukkan 6 digit kode yang kami kirim ke{' '}
         <span className="font-medium text-gray-700">{email ?? 'email Anda'}</span>
+
       </p>
 
       {error && (
         <div role="alert" className="mt-5 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] leading-relaxed text-error-700">
           {error}
         </div>
+
       )}
 
       <form onSubmit={handleSubmit} className="mt-6" noValidate>
@@ -195,6 +206,7 @@ export default function VerifyCodeForm() {
               aria-label={`Digit ke-${index + 1}`}
               className="h-12 w-12 rounded-md border border-gray-300 bg-white text-center text-lg font-semibold text-gray-900 outline-none transition-shadow focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 sm:h-14 sm:w-14"
             />
+
           ))}
         </div>
 
@@ -206,15 +218,20 @@ export default function VerifyCodeForm() {
           {isSubmitting ? (
             <>
               <Spinner size="sm" />
+
               Memverifikasi...
             </>
+
           ) : (
             <>
               Verifikasi Kode
               <ArrowRight size={16} aria-hidden="true" />
+
             </>
+
           )}
         </button>
+
       </form>
 
       <p className="mt-6 text-center text-[13px] text-gray-500">
@@ -227,6 +244,7 @@ export default function VerifyCodeForm() {
         >
           {isResending ? 'Mengirim ulang...' : cooldown > 0 ? `Kirim ulang (${cooldown}s)` : 'Kirim ulang kode'}
         </button>
+
       </p>
 
       {purpose === 'password_reset' && (
@@ -234,8 +252,11 @@ export default function VerifyCodeForm() {
           <Link to="/signin" className="font-medium text-brand-500 hover:underline">
             Kembali masuk
           </Link>
+
         </p>
+
       )}
     </div>
+
   );
 }

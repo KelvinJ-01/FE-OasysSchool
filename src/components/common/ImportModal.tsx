@@ -97,6 +97,7 @@ export function ImportModal({ isOpen, onClose, resource, resourceLabel, onImport
     <Modal isOpen={isOpen} onClose={handleClose} className="m-4 max-w-lg">
       <div className="max-h-[85vh] overflow-y-auto p-6">
         <h3 className="pr-10 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Impor Data {resourceLabel}</h3>
+
         <p className="mt-1 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
           Unggah berkas .xlsx atau .csv dengan judul kolom di baris pertama. Urutan kolom bebas, dan penulisan singkat
           seperti jenis kelamin "L" atau "P" dikenali otomatis.
@@ -106,6 +107,7 @@ export function ImportModal({ isOpen, onClose, resource, resourceLabel, onImport
           <div role="alert" className="mt-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">
             {error}
           </div>
+
         )}
 
         {!file ? (
@@ -128,31 +130,46 @@ export function ImportModal({ isOpen, onClose, resource, resourceLabel, onImport
           >
             <span className="flex size-11 items-center justify-center rounded-full bg-brand-50 text-brand-500 dark:bg-brand-500/10">
               <UploadCloud size={22} aria-hidden="true" />
+
             </span>
+
             <span className="text-[13.5px] font-medium text-gray-700 dark:text-gray-300">
               Klik untuk pilih berkas, atau tarik ke sini
             </span>
+
             <span className="text-theme-xs text-gray-400">.xlsx atau .csv, maksimum 5 MB</span>
+
           </div>
+
         ) : (
           <div className="mt-5 flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3.5 dark:border-gray-800">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary-50 text-secondary-600">
               <FileSpreadsheet size={20} aria-hidden="true" />
+
             </span>
+
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[13.5px] font-medium text-gray-800 dark:text-white/90">{file.name}</span>
+
               <span className="block text-theme-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</span>
+
             </span>
+
             <button type="button" onClick={reset} aria-label="Hapus berkas terpilih" className="text-gray-400 hover:text-error-600">
               <X size={16} aria-hidden="true" />
+
             </button>
+
           </div>
+
         )}
 
         {isParsing && (
           <p className="mt-4 flex items-center gap-2 text-theme-sm text-gray-500">
             <Spinner size="sm" /> Membaca dan memeriksa isi berkas…
+
           </p>
+
         )}
 
         {parsed && !isParsing && parsed.totalRows > 0 && (
@@ -160,13 +177,17 @@ export function ImportModal({ isOpen, onClose, resource, resourceLabel, onImport
             <div className="flex flex-wrap gap-2">
               <span className="flex items-center gap-1.5 rounded-full bg-secondary-50 px-3 py-1 text-theme-xs font-medium text-secondary-700">
                 <CircleCheck size={13} aria-hidden="true" />
+
                 {parsed.validRows.length} baris siap diimpor
               </span>
+
               {parsed.errors.length > 0 && (
                 <span className="flex items-center gap-1.5 rounded-full bg-warning-50 px-3 py-1 text-theme-xs font-medium text-warning-700">
                   <TriangleAlert size={13} aria-hidden="true" />
+
                   {parsed.errors.length} baris bermasalah (dilewati)
                 </span>
+
               )}
             </div>
 
@@ -175,20 +196,26 @@ export function ImportModal({ isOpen, onClose, resource, resourceLabel, onImport
                 {parsed.errors.slice(0, 6).map((e) => (
                   <li key={`${e.row}-${e.message}`} className="text-theme-xs leading-relaxed text-gray-600 dark:text-gray-300">
                     <span className="font-medium">Baris {e.row}:</span> {e.message}
+
                   </li>
+
                 ))}
                 {parsed.errors.length > 6 && (
                   <li className="text-theme-xs text-gray-400">…dan {parsed.errors.length - 6} baris lainnya.</li>
+
                 )}
               </ul>
+
             )}
 
             {parsed.unmappedHeaders.length > 0 && (
               <p className="text-theme-xs leading-relaxed text-gray-400">
                 Kolom yang tidak dikenali dan diabaikan: {parsed.unmappedHeaders.join(', ')}.
               </p>
+
             )}
           </div>
+
         )}
 
         <input
@@ -208,6 +235,7 @@ export function ImportModal({ isOpen, onClose, resource, resourceLabel, onImport
           >
             Batal
           </button>
+
           <button
             type="button"
             onClick={handleImport}
@@ -215,10 +243,15 @@ export function ImportModal({ isOpen, onClose, resource, resourceLabel, onImport
             className="flex h-10 items-center gap-2 rounded-md bg-brand-500 px-5 text-[13.5px] font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
           >
             {isUploading && <Spinner size="sm" />}
+
             {parsed && parsed.validRows.length > 0 ? `Impor ${parsed.validRows.length} Data` : 'Impor'}
           </button>
+
         </div>
+
       </div>
+
     </Modal>
+
   );
 }

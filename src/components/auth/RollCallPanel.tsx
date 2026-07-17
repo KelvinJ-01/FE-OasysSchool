@@ -29,8 +29,11 @@ export function RollCallPanel() {
       <div className="px-10 pt-10 sm:px-14 sm:pt-14">
         <div className="flex items-center gap-2.5">
           <img src="/images/logo/Oasys_School_Logo_3.webp" alt="" className="h-8 w-8" aria-hidden="true" />
+
           <span className="text-[15px] font-medium tracking-wide text-white">Oasys School</span>
+
         </div>
+
       </div>
 
       <div className="px-10 sm:px-14">
@@ -39,6 +42,7 @@ export function RollCallPanel() {
           <br />
           tanpa drama pagi.
         </p>
+
         <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-white/60">
           Pindai QR, sinkron otomatis walau koneksi sekolah putus-nyambung —
           rekap presensi tetap rapi sampai ke wali murid.
@@ -53,13 +57,18 @@ export function RollCallPanel() {
             />
           ))}
         </div>
+
       </div>
 
       <div className="px-10 pb-10 sm:px-14 sm:pb-14">
         <p className="text-[13px] text-white/50">
           <span className="font-medium text-white">{presentCount}</span> siswa tercatat hadir pagi ini
+
         </p>
+
       </div>
+
     </div>
+
   );
 }

@@ -9,9 +9,12 @@ export default function VerifyCode() {
         title="Verifikasi Kode | Dashboard Oasys School"
         description="Masukkan kode verifikasi 6 digit untuk melanjutkan"
       />
+
       <AuthPageLayout>
         <VerifyCodeForm />
       </AuthPageLayout>
+
     </>
+
   );
 }

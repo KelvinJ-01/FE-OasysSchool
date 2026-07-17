@@ -80,10 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Refresh token kini cookie httpOnly, sehingga JavaScript TIDAK dapat
-      // memeriksa keberadaannya lebih dulu. Satu-satunya cara mengetahui apakah
-      // sesi masih hidup adalah mencoba menukarkannya: 401 berarti tidak ada
-      // sesi. Justru inilah yang membuat token tersebut aman dari XSS.
       try {
         const { data } = await axios.post<LoginResponse>(
           `${env.apiBaseUrl}/auth/refresh-token`,
@@ -111,8 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const { data } = await apiClient.post<LoginResponse>('/auth/login', payload);
-      // Hanya access token yang dipegang klien; refresh token dipasang backend
-      // sebagai cookie httpOnly pada respons ini.
+
       setAccessToken(data.accessToken);
 
       const decoded = decodeUserFromToken(data.accessToken);

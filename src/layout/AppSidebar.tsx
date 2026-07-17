@@ -50,8 +50,11 @@ const AppSidebar: React.FC = () => {
       <div className={`py-8 flex items-center gap-2.5 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"}`}>
         <Link to="/dashboard" className="flex items-center gap-2.5">
           <img src="/images/logo/Oasys_School_Logo_3.webp" alt="Oasys School" width={32} height={32} className="shrink-0" />
+
           {showLabel && <span className="text-[15px] font-semibold text-gray-900 dark:text-white/90">Oasys School</span>}
+
         </Link>
+
       </div>
 
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
@@ -62,6 +65,7 @@ const AppSidebar: React.FC = () => {
             }`}
           >
             {showLabel ? "Menu" : <span className="block h-px w-5 bg-gray-200 dark:bg-gray-800" aria-hidden="true" />}
+
           </h2>
 
           <ul className="flex flex-col gap-4">
@@ -76,14 +80,22 @@ const AppSidebar: React.FC = () => {
                   <span className={`menu-item-icon-size ${isActive(nav.path) ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>
                     {nav.icon}
                   </span>
+
                   {showLabel && <span className="menu-item-text">{nav.name}</span>}
+
                 </Link>
+
               </li>
+
             ))}
           </ul>
+
         </nav>
+
       </div>
+
     </aside>
+
   );
 };
 

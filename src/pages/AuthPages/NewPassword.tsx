@@ -9,9 +9,12 @@ export default function NewPassword() {
         title="Kata Sandi Baru | Dashboard Oasys School"
         description="Buat kata sandi baru untuk akun Anda"
       />
+
       <AuthPageLayout>
         <NewPasswordForm />
       </AuthPageLayout>
+
     </>
+
   );
 }

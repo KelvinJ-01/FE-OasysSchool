@@ -103,16 +103,22 @@ export function OtpConfirmModal({
         <div className="flex gap-4">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-500 dark:bg-brand-500/10">
             <ShieldCheck size={22} aria-hidden="true" />
+
           </span>
+
           <div className="pr-8">
             <h3 className="text-[15px] font-semibold text-gray-900 dark:text-white/90">{title}</h3>
+
             <p className="mt-1 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
               {description ?? `Kami mengirim kode 6 digit ke ${email}. Masukkan kode itu untuk melanjutkan.`}
             </p>
+
           </div>
+
         </div>
 
         {error && <div role="alert" className="mt-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">{error}</div>}
+
         {resendInfo && <div className="mt-4 rounded-md border border-secondary-200 bg-secondary-50 px-3.5 py-3 text-[13.5px] text-secondary-700">{resendInfo}</div>}
 
         <form onSubmit={handleSubmit} className="mt-5" noValidate>
@@ -130,6 +136,7 @@ export function OtpConfirmModal({
                 aria-label={`Digit ${i + 1}`}
                 className="h-12 w-11 rounded-md border border-gray-300 bg-white text-center text-[18px] font-semibold text-gray-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
               />
+
             ))}
           </div>
 
@@ -139,20 +146,29 @@ export function OtpConfirmModal({
               <button type="button" onClick={handleResend} disabled={isResending} className="font-medium text-brand-500 hover:underline disabled:opacity-60">
                 {isResending ? 'Mengirim…' : 'Kirim ulang'}
               </button>
+
             </p>
+
           )}
 
           <div className="mt-6 flex justify-end gap-2">
             <button type="button" onClick={onClose} disabled={isSubmitting} className="h-10 rounded-md px-4 text-[13.5px] font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60 dark:text-gray-300 dark:hover:bg-white/5">
               Batal
             </button>
+
             <button type="submit" disabled={isSubmitting} className="flex h-10 items-center gap-2 rounded-md bg-brand-500 px-5 text-[13.5px] font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60">
               {isSubmitting && <Spinner size="sm" />}
+
               Konfirmasi
             </button>
+
           </div>
+
         </form>
+
       </div>
+
     </Modal>
+
   );
 }

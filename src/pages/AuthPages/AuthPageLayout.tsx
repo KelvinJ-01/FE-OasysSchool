@@ -14,7 +14,10 @@ export default function AuthPageLayout({ children }: AuthPageLayoutProps) {
 
       <div className="flex min-h-screen flex-col justify-center bg-white px-6 py-12 font-jakarta sm:px-10 lg:px-16">
         <div className="mx-auto w-full max-w-sm">{children}</div>
+
       </div>
+
     </div>
+
   );
 }

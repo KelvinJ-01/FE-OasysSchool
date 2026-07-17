@@ -79,16 +79,22 @@ export default function StudentsPage() {
         <span className="flex items-center gap-3">
           {s.photoUrl ? (
             <img src={s.photoUrl} alt="" className="size-9 rounded-full object-cover" />
+
           ) : (
             <span className="flex size-9 items-center justify-center rounded-full bg-brand-50 text-theme-xs font-semibold text-brand-600 dark:bg-brand-500/10">
               {initials(s.fullName)}
             </span>
+
           )}
           <span>
             <span className="block font-medium text-gray-800 dark:text-white/90">{s.fullName}</span>
+
             <span className="block text-theme-xs text-gray-400">{s.gender ? GENDER_LABEL[s.gender] : '—'}</span>
+
           </span>
+
         </span>
+
       ),
     },
     { key: 'nisn', header: 'NISN', render: (s) => s.nisn },
@@ -100,6 +106,7 @@ export default function StudentsPage() {
         <span className={`rounded-full px-2.5 py-0.5 text-theme-xs font-medium ${s.status === 'aktif' ? 'bg-secondary-50 text-secondary-700' : 'bg-gray-100 text-gray-600'}`}>
           {STATUS_LABEL[s.status]}
         </span>
+
       ),
     },
     {
@@ -123,7 +130,9 @@ export default function StudentsPage() {
           <div className="relative">
             <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
               <Search size={16} aria-hidden="true" />
+
             </span>
+
             <input
               type="text"
               value={search}
@@ -132,7 +141,9 @@ export default function StudentsPage() {
               aria-label="Cari siswa"
               className="h-10 w-56 rounded-md border border-gray-300 bg-white pl-9 pr-3 text-theme-sm text-gray-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             />
+
           </div>
+
           <select
             value={classFilter}
             onChange={(e) => setClassFilter(e.target.value)}
@@ -140,10 +151,13 @@ export default function StudentsPage() {
             className="h-10 rounded-md border border-gray-300 bg-white px-3 text-theme-sm text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
           >
             <option value="">Semua Kelas</option>
+
             {classes.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
+
             ))}
           </select>
+
         </div>
 
         {isAdmin && (
@@ -154,17 +168,22 @@ export default function StudentsPage() {
               className="flex h-10 items-center gap-1.5 rounded-md border border-gray-300 bg-white px-4 text-theme-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5"
             >
               <Upload size={16} aria-hidden="true" />
+
               Impor
             </button>
+
             <button
               type="button"
               onClick={() => { setActiveStudent(null); openFormModal(); }}
               className="flex h-10 items-center gap-1.5 rounded-md bg-brand-500 px-4 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600"
             >
               <Plus size={16} aria-hidden="true" />
+
               Tambah Siswa
             </button>
+
           </div>
+
         )}
       </div>
 
@@ -172,6 +191,7 @@ export default function StudentsPage() {
         <div role="alert" className="mb-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">
           {listError}
         </div>
+
       )}
 
       <DataTable
@@ -213,6 +233,7 @@ export default function StudentsPage() {
         }}
       />
     </div>
+
   );
 }
 
@@ -280,15 +301,20 @@ function StudentDetailModal({ isOpen, onClose, student, classes, canPrint }: { i
         <div className="flex items-center gap-4">
           {student.photoUrl ? (
             <img src={student.photoUrl} alt="" className="size-14 rounded-full object-cover" />
+
           ) : (
             <span className="flex size-14 items-center justify-center rounded-full bg-brand-50 text-[18px] font-semibold text-brand-600 dark:bg-brand-500/10">
               {initials(student.fullName)}
             </span>
+
           )}
           <div>
             <h3 className="text-[16px] font-semibold text-gray-800 dark:text-white/90">{student.fullName}</h3>
+
             <p className="text-theme-xs text-gray-400">Status: {STATUS_LABEL[student.status]}</p>
+
           </div>
+
         </div>
 
         <div className="mt-6 grid gap-6 sm:grid-cols-[1fr_auto]">
@@ -296,8 +322,11 @@ function StudentDetailModal({ isOpen, onClose, student, classes, canPrint }: { i
             {rows.map(([label, value]) => (
               <div key={label} className="grid grid-cols-[130px_1fr] gap-2 text-[13.5px]">
                 <dt className="text-gray-400">{label}</dt>
+
                 <dd className="text-gray-700 dark:text-gray-300">{value}</dd>
+
               </div>
+
             ))}
           </dl>
 
@@ -306,9 +335,11 @@ function StudentDetailModal({ isOpen, onClose, student, classes, canPrint }: { i
               <div className="rounded-lg bg-white p-2">
                 <QRCode id={`qr-${student.id}`} value={student.qrCode} size={128} />
               </div>
+
               <p className="max-w-[150px] text-center text-theme-xs leading-snug text-gray-400">
                 QR statis untuk dicetak dan dibagikan ke siswa
               </p>
+
               {canPrint && (
               <button
                 type="button"
@@ -316,10 +347,13 @@ function StudentDetailModal({ isOpen, onClose, student, classes, canPrint }: { i
                 className="flex h-9 items-center gap-1.5 rounded-md border border-gray-300 px-3 text-theme-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
               >
                 <Printer size={14} aria-hidden="true" />
+
                 Cetak Kartu QR
               </button>
+
               )}
             </div>
+
           )}
         </div>
 
@@ -327,9 +361,13 @@ function StudentDetailModal({ isOpen, onClose, student, classes, canPrint }: { i
           <button type="button" onClick={onClose} className="h-10 rounded-md px-4 text-theme-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5">
             Tutup
           </button>
+
         </div>
+
       </div>
+
     </Modal>
+
   );
 }
 
@@ -434,95 +472,142 @@ function StudentFormModal({ isOpen, onClose, student, classes, onSaved }: { isOp
               <label htmlFor="st-fullName" className={labelCls}>Nama Lengkap<span aria-hidden="true" className="text-error-500"> *</span></label>
               <input id="st-fullName" type="text" required value={form.fullName} onChange={(e) => set('fullName', e.target.value)} onBlur={(e) => set('fullName', toTitleCase(e.target.value))} className={inputCls} />
             </div>
+
             {!isEdit && (
               <div>
                 <label htmlFor="st-nisn" className={labelCls}>NISN<span aria-hidden="true" className="text-error-500"> *</span></label>
                 <input id="st-nisn" type="text" required inputMode="numeric" maxLength={10} value={form.nisn} onChange={(e) => set('nisn', e.target.value.replace(/\D/g, ''))} className={inputCls} />
               </div>
+
             )}
             <div>
               <label htmlFor="st-class" className={labelCls}>Kelas</label>
+
               <select id="st-class" value={form.classId} onChange={(e) => set('classId', e.target.value)} className={inputCls}>
                 <option value="">Belum ditentukan</option>
+
                 {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+
               </select>
+
             </div>
+
             <div>
               <label htmlFor="st-gender" className={labelCls}>Jenis Kelamin</label>
+
               <select id="st-gender" value={form.gender} onChange={(e) => set('gender', e.target.value as Gender | '')} className={inputCls}>
                 <option value="">Pilih</option>
+
                 {(Object.keys(GENDER_LABEL) as Gender[]).map((g) => <option key={g} value={g}>{GENDER_LABEL[g]}</option>)}
+
               </select>
+
             </div>
+
             <div>
               <label htmlFor="st-religion" className={labelCls}>Agama</label>
+
               <select id="st-religion" value={form.religion} onChange={(e) => set('religion', e.target.value as Religion | '')} className={inputCls}>
                 <option value="">Pilih</option>
+
                 {(Object.keys(RELIGION_LABEL) as Religion[]).map((r) => <option key={r} value={r}>{RELIGION_LABEL[r]}</option>)}
+
               </select>
+
             </div>
+
             <div>
               <label htmlFor="st-email" className={labelCls}>Email</label>
+
               <input id="st-email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} className={inputCls} />
             </div>
+
             <div>
               <label htmlFor="st-phone" className={labelCls}>Nomor Telepon</label>
+
               <input id="st-phone" type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} className={inputCls} />
             </div>
+
             <div className="sm:col-span-2">
               <label htmlFor="st-address" className={labelCls}>Alamat</label>
+
               <input id="st-address" type="text" value={form.address} onChange={(e) => set('address', e.target.value)} className={inputCls} />
             </div>
+
           </div>
 
           <p className="pt-1 text-theme-xs font-medium uppercase tracking-wide text-gray-400">Keluarga</p>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="st-father" className={labelCls}>Nama Ayah</label>
+
               <input id="st-father" type="text" value={form.fatherName} onChange={(e) => set('fatherName', e.target.value)} onBlur={(e) => set('fatherName', toTitleCase(e.target.value))} className={inputCls} />
             </div>
+
             <div>
               <label htmlFor="st-mother" className={labelCls}>Nama Ibu</label>
+
               <input id="st-mother" type="text" value={form.motherName} onChange={(e) => set('motherName', e.target.value)} onBlur={(e) => set('motherName', toTitleCase(e.target.value))} className={inputCls} />
             </div>
+
             <div>
               <label htmlFor="st-g1" className={labelCls}>Nama Wali Siswa 1 (opsional)</label>
+
               <input id="st-g1" type="text" value={form.guardian1Name} onChange={(e) => set('guardian1Name', e.target.value)} onBlur={(e) => set('guardian1Name', toTitleCase(e.target.value))} className={inputCls} />
             </div>
+
             <div>
               <label htmlFor="st-g1p" className={labelCls}>Telepon Wali Siswa 1</label>
+
               <input id="st-g1p" type="tel" value={form.guardian1Phone} onChange={(e) => set('guardian1Phone', e.target.value)} className={inputCls} />
             </div>
+
             <div>
               <label htmlFor="st-g2" className={labelCls}>Nama Wali Siswa 2 (opsional)</label>
+
               <input id="st-g2" type="text" value={form.guardian2Name} onChange={(e) => set('guardian2Name', e.target.value)} onBlur={(e) => set('guardian2Name', toTitleCase(e.target.value))} className={inputCls} />
             </div>
+
             <div>
               <label htmlFor="st-g2p" className={labelCls}>Telepon Wali Siswa 2</label>
+
               <input id="st-g2p" type="tel" value={form.guardian2Phone} onChange={(e) => set('guardian2Phone', e.target.value)} className={inputCls} />
             </div>
+
           </div>
 
           {isEdit && (
             <div>
               <label htmlFor="st-status" className={labelCls}>Status Siswa</label>
+
               <select id="st-status" value={form.status} onChange={(e) => set('status', e.target.value as StudentStatus)} className={inputCls}>
                 <option value="aktif">Aktif</option>
+
                 <option value="pindah_sekolah">Pindah Sekolah</option>
+
                 <option value="keluar">Keluar</option>
+
               </select>
+
             </div>
+
           )}
 
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="h-10 rounded-md px-4 text-theme-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5">Batal</button>
+
             <button type="submit" disabled={isSubmitting} className="flex h-10 items-center rounded-md bg-brand-500 px-5 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60">
               {isSubmitting ? (<><Spinner size="sm" className="mr-2" />Menyimpan...</>) : 'Simpan'}
             </button>
+
           </div>
+
         </form>
+
       </div>
+
     </Modal>
+
   );
 }
-

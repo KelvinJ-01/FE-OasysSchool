@@ -25,7 +25,9 @@ const ROLE_LABEL: Record<UserRole, string> = {
 
 const STATUS_BADGE: Record<AccountStatus, { label: string; className: string; icon: React.ReactNode }> = {
   active: { label: 'Aktif', className: 'bg-secondary-50 text-secondary-700', icon: <CircleCheck size={14} aria-hidden="true" /> },
+
   pending_verification: { label: 'Menunggu Verifikasi', className: 'bg-warning-50 text-warning-700', icon: <Clock size={14} aria-hidden="true" /> },
+
   suspended: { label: 'Ditangguhkan', className: 'bg-error-50 text-error-700', icon: <CircleX size={14} aria-hidden="true" /> },
 };
 
@@ -178,6 +180,7 @@ export function ProfileInfoCard() {
       <div role="alert" className="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700">
         {loadError ?? 'Profil tidak tersedia.'}
       </div>
+
     );
   }
 
@@ -187,15 +190,18 @@ export function ProfileInfoCard() {
     <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h3 className="pr-10 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Informasi Profil</h3>
+
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-theme-xs font-medium ${badge.className}`}>
           {badge.icon}
           {badge.label}
         </span>
+
       </div>
 
       <div className="mb-6 flex items-center gap-4">
         <div className="relative">
           <Avatar fullName={profile.fullName} photoUrl={profile.photoUrl} size="lg" />
+
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -204,7 +210,9 @@ export function ProfileInfoCard() {
             className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full border-2 border-white bg-brand-500 text-white transition-colors hover:bg-brand-600 disabled:opacity-60 dark:border-gray-900"
           >
             <Camera size={13} aria-hidden="true" />
+
           </button>
+
           <input
             ref={fileInputRef}
             type="file"
@@ -212,12 +220,16 @@ export function ProfileInfoCard() {
             onChange={handlePhotoSelected}
             className="hidden"
           />
+
         </div>
+
         <div>
           <p className="text-[13.5px] font-medium text-gray-900 dark:text-white/90">
             {isUploadingPhoto ? 'Memproses...' : 'Foto Profil'}
           </p>
+
           <p className="text-theme-xs text-gray-400">JPEG/PNG/WebP, maks. 2 MB.</p>
+
           {profile.photoUrl && (
             <button
               type="button"
@@ -226,10 +238,13 @@ export function ProfileInfoCard() {
               className="mt-1 flex items-center gap-1 text-theme-xs font-medium text-error-600 hover:underline disabled:opacity-60"
             >
               <Trash2 size={12} aria-hidden="true" />
+
               Hapus foto
             </button>
+
           )}
         </div>
+
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
@@ -237,7 +252,9 @@ export function ProfileInfoCard() {
           <div>
             <label htmlFor="fullName" className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">
               Nama Lengkap<span aria-hidden="true" className="text-error-500"> *</span>
+
             </label>
+
             <input
               id="fullName"
               type="text"
@@ -248,12 +265,14 @@ export function ProfileInfoCard() {
               }`}
             />
             {fieldErrors.fullName && <p className="mt-1.5 text-[12.5px] text-error-600">{fieldErrors.fullName}</p>}
+
           </div>
 
           <div>
             <label htmlFor="phone" className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">
               Nomor Telepon
             </label>
+
             <input
               id="phone"
               type="tel"
@@ -262,13 +281,17 @@ export function ProfileInfoCard() {
               placeholder="08123456789"
               className="h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 text-[14px] text-gray-900 outline-none transition-shadow focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             />
+
             {fieldErrors.phone && <p className="mt-1.5 text-[12.5px] text-error-600">{fieldErrors.phone}</p>}
+
           </div>
 
           <div>
             <label htmlFor="email" className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">
               Email<span aria-hidden="true" className="text-error-500"> *</span>
+
             </label>
+
             <input
               id="email"
               type="email"
@@ -277,13 +300,18 @@ export function ProfileInfoCard() {
               autoComplete="email"
               className="h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 text-[14px] text-gray-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             />
+
             {fieldErrors.email && <p className="mt-1.5 text-[12.5px] text-error-600">{fieldErrors.email}</p>}
+
           </div>
 
           <div>
             <span className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Peran</span>
+
             <p className="flex h-11 items-center text-[14px] text-gray-500 dark:text-gray-400">{ROLE_LABEL[profile.role]}</p>
+
           </div>
+
         </div>
 
         <div className="flex items-center justify-between border-t border-gray-100 pt-5 dark:border-gray-800">
@@ -292,6 +320,7 @@ export function ProfileInfoCard() {
               ? `Bergabung sejak ${new Date(profile.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
               : ''}
           </p>
+
           <button
             type="submit"
             disabled={!isDirty || isSaving}
@@ -300,13 +329,17 @@ export function ProfileInfoCard() {
             {isSaving ? (
               <>
                 <Spinner size="sm" className="mr-2" />
+
                 Menyimpan...
               </>
+
             ) : (
               'Simpan Perubahan'
             )}
           </button>
+
         </div>
+
       </form>
 
       <OtpConfirmModal
@@ -330,5 +363,6 @@ export function ProfileInfoCard() {
         }}
       />
     </div>
+
   );
 }

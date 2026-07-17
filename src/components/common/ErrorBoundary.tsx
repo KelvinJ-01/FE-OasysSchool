@@ -33,9 +33,11 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white px-6 text-center dark:bg-gray-900">
           <h1 className="text-[22px] font-semibold text-gray-900 dark:text-white/90">Terjadi kesalahan tak terduga</h1>
+
           <p className="max-w-md text-[14px] text-gray-500 dark:text-gray-400">
             Maaf, ada yang tidak beres saat memuat halaman. Coba muat ulang, atau kembali ke dasbor.
           </p>
+
           <button
             type="button"
             onClick={this.handleReload}
@@ -43,7 +45,9 @@ export class ErrorBoundary extends Component<Props, State> {
           >
             Kembali ke Dasbor
           </button>
+
         </div>
+
       );
     }
     return this.props.children;

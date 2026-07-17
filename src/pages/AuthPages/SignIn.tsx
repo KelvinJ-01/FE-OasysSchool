@@ -9,9 +9,12 @@ export default function SignIn() {
         title="Masuk | Dashboard Oasys School"
         description="Halaman masuk untuk guru dan staf Oasys School"
       />
+
       <AuthPageLayout>
         <SignInForm />
       </AuthPageLayout>
+
     </>
+
   );
 }

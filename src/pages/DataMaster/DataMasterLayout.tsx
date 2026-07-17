@@ -23,6 +23,7 @@ export default function DataMasterLayout() {
   return (
     <>
       <PageMeta title="Data Master | Oasys School" description="Kelola data induk sekolah" />
+
       <PageBreadCrumb pageTitle="Data Master" />
 
       <div className="mb-5 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-800">
@@ -40,10 +41,12 @@ export default function DataMasterLayout() {
           >
             {tab.label}
           </NavLink>
+
         ))}
       </div>
 
       <Outlet />
     </>
+
   );
 }

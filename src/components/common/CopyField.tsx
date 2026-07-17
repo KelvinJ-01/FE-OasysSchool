@@ -30,10 +30,13 @@ export function CopyField({ label, value, variant = 'light' }: CopyFieldProps) {
     >
       <div>
         <p className={`text-theme-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{label}</p>
+
         <p className={`mt-0.5 font-mono text-[14.5px] font-medium ${isDark ? 'text-white' : 'text-gray-800 dark:text-white/90'}`}>
           {value}
         </p>
+
       </div>
+
       <button
         type="button"
         onClick={handleCopy}
@@ -44,6 +47,8 @@ export function CopyField({ label, value, variant = 'light' }: CopyFieldProps) {
       >
         {copied ? <Check size={16} className="text-secondary-500" aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
       </button>
+
     </div>
+
   );
 }

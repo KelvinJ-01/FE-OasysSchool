@@ -46,6 +46,7 @@ export default function ResetPasswordForm() {
   return (
     <div className="font-jakarta">
       <h1 className="text-[22px] font-semibold text-gray-900">Lupa kata sandi?</h1>
+
       <p className="mt-1.5 text-[14px] text-gray-500">
         Masukkan email akun Anda, kami akan mengirimkan kode verifikasi 6 digit.
       </p>
@@ -55,10 +56,13 @@ export default function ResetPasswordForm() {
           <label htmlFor="email" className="mb-1.5 block text-[13.5px] font-medium text-gray-900">
             Email
           </label>
+
           <div className="relative">
             <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-gray-400">
               <Mail size={18} aria-hidden="true" />
+
             </span>
+
             <input
               id="email"
               type="email"
@@ -71,7 +75,9 @@ export default function ResetPasswordForm() {
               }`}
             />
           </div>
+
           {error && <p className="mt-1.5 text-[12.5px] text-error-600">{error}</p>}
+
         </div>
 
         <button
@@ -82,15 +88,20 @@ export default function ResetPasswordForm() {
           {isSubmitting ? (
             <>
               <Spinner size="sm" />
+
               Mengirim...
             </>
+
           ) : (
             <>
               Kirim Kode Verifikasi
               <ArrowRight size={16} aria-hidden="true" />
+
             </>
+
           )}
         </button>
+
       </form>
 
       <p className="mt-6 text-center text-[13px] text-gray-500">
@@ -98,7 +109,10 @@ export default function ResetPasswordForm() {
         <Link to="/signin" className="font-medium text-brand-500 hover:underline">
           Kembali masuk
         </Link>
+
       </p>
+
     </div>
+
   );
 }

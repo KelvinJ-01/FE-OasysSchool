@@ -10,10 +10,6 @@ import {
 describe('dateUtils', () => {
   describe('toLocalIsoDate', () => {
     it('memakai komponen tanggal LOKAL, bukan UTC (regresi bug 14 vs 15 Juli)', () => {
-      // Bug lama: toISOString() memberi tanggal UTC, sehingga di WIB (UTC+7)
-      // pukul 00:00–06:59 tanggalnya mundur sehari. Tes ini tidak bergantung
-      // pada zona waktu mesin: kita bangun Date dari komponen LOKAL, lalu
-      // pastikan hasilnya mengikuti komponen itu apa adanya.
       const lokal = new Date(2026, 6, 15, 6, 51);
       expect(toLocalIsoDate(lokal)).toBe('2026-07-15');
       expect(toLocalIsoDate(lokal)).toBe(

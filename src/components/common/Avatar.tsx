@@ -36,5 +36,6 @@ export function Avatar({ fullName, photoUrl, size = 'md', className = '' }: Avat
     >
       {getInitials(fullName)}
     </span>
+
   );
 }

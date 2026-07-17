@@ -34,6 +34,7 @@ export default function Welcome() {
           <h1 className="font-display mt-6 max-w-lg text-center text-[36px] leading-[1.15] text-white sm:text-[44px]">
             Selamat datang di Oasys School
           </h1>
+
           <p className="mt-4 max-w-md text-center text-[15px] leading-relaxed text-white/60">
             Presensi digital berbasis QR dan komunikasi sekolah-rumah, dalam satu platform.
           </p>
@@ -41,31 +42,40 @@ export default function Welcome() {
           <div className="mt-12 grid w-full max-w-2xl gap-4 sm:grid-cols-2">
             <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
               <User className="size-8 text-secondary-400" />
+
               <h2 className="mt-4 text-[17px] font-medium text-white">Staf sekolah</h2>
+
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-white/55">
                 Untuk Guru dan Administrator yang sudah memiliki akun dari sekolah.
               </p>
+
               <Link
                 to="/signin"
                 className="mt-5 flex h-11 items-center justify-center rounded-md bg-brand-500 text-[14px] font-medium text-white transition-colors hover:bg-brand-600"
               >
                 Masuk ke dasbor
               </Link>
+
             </div>
 
             <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
               <Users className="size-8 text-secondary-400" />
+
               <h2 className="mt-4 text-[17px] font-medium text-white">Orang tua & wali murid</h2>
+
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-white/55">
                 Daftar untuk memantau presensi dan info akademik anak Anda.
               </p>
+
               <Link
                 to="/signup"
                 className="mt-5 flex h-11 items-center justify-center rounded-md border border-white/20 text-[14px] font-medium text-white transition-colors hover:bg-white/10"
               >
                 Daftar sekarang
               </Link>
+
             </div>
+
           </div>
 
           <p className="mt-8 max-w-md text-center text-[12.5px] leading-relaxed text-white/40">
@@ -78,8 +88,12 @@ export default function Welcome() {
           >
             Dukung pengembangan Oasys School →
           </Link>
+
         </div>
+
       </div>
+
     </>
+
   );
 }

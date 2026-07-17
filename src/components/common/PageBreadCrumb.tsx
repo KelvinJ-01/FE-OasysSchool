@@ -13,6 +13,7 @@ const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle }) => {
       >
         {pageTitle}
       </h2>
+
       <nav>
         <ol className="flex items-center gap-1.5">
           <li>
@@ -36,15 +37,23 @@ const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle }) => {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
+
               </svg>
+
             </Link>
+
           </li>
+
           <li className="text-sm text-gray-800 dark:text-white/90">
             {pageTitle}
           </li>
+
         </ol>
+
       </nav>
+
     </div>
+
   );
 };
 

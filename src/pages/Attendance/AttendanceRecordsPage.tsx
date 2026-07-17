@@ -35,8 +35,11 @@ const ROLE_LABEL: Record<string, string> = {
 
 const STATUS_META: Record<AttendanceStatus, { label: string; className: string; icon: React.ReactNode }> = {
   hadir: { label: 'Hadir', className: 'bg-secondary-50 text-secondary-700', icon: <CircleCheck size={13} aria-hidden="true" /> },
+
   sakit: { label: 'Sakit', className: 'bg-warning-50 text-warning-700', icon: <Thermometer size={13} aria-hidden="true" /> },
+
   izin: { label: 'Izin', className: 'bg-blue-light-50 text-blue-light-700', icon: <FileText size={13} aria-hidden="true" /> },
+
   alpa: { label: 'Alpa', className: 'bg-error-50 text-error-700', icon: <CircleX size={13} aria-hidden="true" /> },
 };
 
@@ -51,7 +54,6 @@ export default function AttendanceRecordsPage() {
   const [sessionDate, setSessionDate] = useState(todayIso());
   const { isOpen: isExportOpen, openModal: openExportModal, closeModal: closeExportModal } = useModal();
   const [statusFilter, setStatusFilter] = useState('');
-
 
   const [pageNumber, setPageNumber] = useState(1);
 
@@ -133,6 +135,7 @@ export default function AttendanceRecordsPage() {
             {meta.icon}
             {meta.label}
           </span>
+
         );
       },
     },
@@ -150,7 +153,9 @@ export default function AttendanceRecordsPage() {
             className="flex size-8 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/5 dark:hover:text-gray-200"
           >
             <History size={16} aria-hidden="true" />
+
           </button>
+
           <button
             type="button"
             onClick={() => openCorrect(r)}
@@ -159,8 +164,11 @@ export default function AttendanceRecordsPage() {
             className="flex size-8 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/10"
           >
             <Pencil size={16} aria-hidden="true" />
+
           </button>
+
         </div>
+
       ),
     },
   ];
@@ -170,15 +178,19 @@ export default function AttendanceRecordsPage() {
   return (
     <>
       <PageMeta title="Presensi | Oasys School" description="Lihat dan koreksi presensi siswa" />
+
       <PageBreadCrumb pageTitle="Presensi" />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <select value={classId} onChange={(e) => { setClassId(e.target.value); setPageNumber(1); }} className={selectClass}>
           <option value="">Pilih kelas...</option>
+
           {classes.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
+
           ))}
         </select>
+
         <select
           value={subjectId}
           onChange={(e) => { setSubjectId(e.target.value); setPageNumber(1); }}
@@ -186,49 +198,63 @@ export default function AttendanceRecordsPage() {
           className={selectClass}
         >
           <option value="">Semua Mata Pelajaran</option>
+
           {subjects.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
+
           ))}
         </select>
+
         <DatePicker
           value={sessionDate}
           onChange={(v) => { setSessionDate(v); setPageNumber(1); }}
           ariaLabel="Filter tanggal presensi"
         />
+
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPageNumber(1); }} className={selectClass}>
           <option value="">Semua Status</option>
+
           {(Object.keys(STATUS_META) as AttendanceStatus[]).map((s) => (
             <option key={s} value={s}>{STATUS_META[s].label}</option>
+
           ))}
         </select>
+
         <button
           type="button"
           onClick={openExportModal}
           className="ml-auto flex h-10 items-center gap-1.5 rounded-md border border-gray-300 bg-white px-4 text-theme-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5"
         >
           <Download size={16} aria-hidden="true" />
+
           Ekspor Laporan
         </button>
+
       </div>
 
       <Modal isOpen={isExportOpen} onClose={closeExportModal} className="m-4 max-w-xl">
         <div className="max-h-[85vh] overflow-y-auto p-6">
           <h3 className="mb-1 pr-10 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Ekspor Laporan Presensi</h3>
+
           <p className="mb-4 text-[13px] text-gray-500 dark:text-gray-400">Unduh rekap presensi dalam format Excel atau CSV.</p>
+
           <ReportsExportFilter />
         </div>
+
       </Modal>
 
       {!classId && (
         <div className="rounded-xl border border-gray-200 bg-gray-50 px-5 py-10 text-center text-theme-sm text-gray-400 dark:border-gray-800 dark:bg-white/[0.02]">
           Pilih kelas terlebih dahulu untuk melihat presensi.
         </div>
+
       )}
 
       {classId && listError && (
         <div role="alert" className="mb-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">
           {listError}
         </div>
+
       )}
 
       {classId && (
@@ -267,6 +293,7 @@ export default function AttendanceRecordsPage() {
         />
       )}
     </>
+
   );
 }
 
@@ -313,9 +340,12 @@ function CorrectStatusModal({
     <Modal isOpen={isOpen} onClose={onClose} className="m-4 max-w-sm">
       <div className="p-6">
         <h3 className="mb-2 pr-10 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Koreksi Status Presensi</h3>
+
         <p className="mb-5 text-[13px] text-gray-500 dark:text-gray-400">
           Mengubah status kehadiran <span className="font-medium text-gray-700 dark:text-gray-300">{studentName}</span>{' '}
+
           (saat ini: <span className="font-medium">{STATUS_META[record.status].label}</span>).
+
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -325,27 +355,37 @@ function CorrectStatusModal({
                 status === opt ? 'border-brand-500 bg-brand-25 text-brand-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300'
               }`}>
                 <input type="radio" name="status" value={opt} checked={status === opt} onChange={() => setStatus(opt)} className="sr-only" />
+
                 {STATUS_META[opt].label}
               </label>
+
             ))}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="h-10 rounded-md px-4 text-theme-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5">Batal</button>
+
             <button type="submit" disabled={isSubmitting || status === record.status} className="h-10 rounded-md bg-brand-500 px-5 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60">
               {isSubmitting ? (
                 <>
                   <Spinner size="sm" className="mr-2" />
+
                   Menyimpan...
                 </>
+
               ) : (
                 'Simpan'
               )}
             </button>
+
           </div>
+
         </form>
+
       </div>
+
     </Modal>
+
   );
 }
 
@@ -371,13 +411,16 @@ function HistoryModal({
     <Modal isOpen={isOpen} onClose={onClose} className="m-4 max-w-md">
       <div className="p-6">
         <h3 className="mb-1 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Riwayat Perubahan Status</h3>
+
         <p className="mb-5 text-[13px] text-gray-500 dark:text-gray-400">{studentName}</p>
 
         {isLoading && <Skeleton className="h-20 rounded-md" />}
+
         {error && <p className="text-[13.5px] text-error-600">{error}</p>}
 
         {!isLoading && !error && history.length === 0 && (
           <p className="text-theme-sm text-gray-400">Belum ada perubahan status untuk rekaman ini.</p>
+
         )}
 
         {!isLoading && !error && history.length > 0 && (
@@ -386,19 +429,27 @@ function HistoryModal({
               <li key={h.id} className="rounded-md border border-gray-100 px-3.5 py-2.5 text-theme-sm dark:border-gray-800">
                 <p className="text-gray-700 dark:text-gray-300">
                   <span className="font-medium">{STATUS_META[h.oldStatus].label}</span> →{' '}
+
                   <span className="font-medium">{STATUS_META[h.newStatus].label}</span>
+
                 </p>
+
                 <p className="mt-0.5 text-theme-xs text-gray-400">
                   {h.changedByName ?? staffNameById[h.changedBy] ?? 'Staf sekolah'}
                   {h.changedByRole ? ` (${ROLE_LABEL[h.changedByRole] ?? h.changedByRole})` : ''}
                   {' · '}
                   {new Date(h.changedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
                 </p>
+
               </li>
+
             ))}
           </ul>
+
         )}
       </div>
+
     </Modal>
+
   );
 }

@@ -72,11 +72,15 @@ export function ChangePasswordCard() {
       <div>
         <label htmlFor={id} className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">
           {label}<span aria-hidden="true" className="text-error-500"> *</span>
+
         </label>
+
         <div className="relative">
           <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-gray-400">
             <Lock size={18} aria-hidden="true" />
+
           </span>
+
           <input
             id={id}
             type={isVisible ? 'text' : 'password'}
@@ -95,9 +99,13 @@ export function ChangePasswordCard() {
           >
             {isVisible ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
           </button>
+
         </div>
+
         {errors[id] && <p className="mt-1.5 text-[12.5px] text-error-600">{errors[id]}</p>}
+
       </div>
+
     );
   }
 
@@ -119,14 +127,19 @@ export function ChangePasswordCard() {
             {isSubmitting ? (
               <>
                 <Spinner size="sm" className="mr-2" />
+
                 Menyimpan...
               </>
+
             ) : (
               'Ubah Kata Sandi'
             )}
           </button>
+
         </div>
+
       </form>
+
       <OtpConfirmModal
         isOpen={isOtpOpen}
         onClose={() => setIsOtpOpen(false)}
@@ -141,5 +154,6 @@ export function ChangePasswordCard() {
         }}
       />
     </div>
+
   );
 }

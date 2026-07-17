@@ -17,7 +17,10 @@ export default function Home() {
           <TodaySchedule />
           <QuickLinks />
         </div>
+
       </div>
+
     </>
+
   );
 }

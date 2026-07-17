@@ -79,18 +79,28 @@ export default function App() {
                           <Route path="teachers" element={<TeachersPage />} />
                           <Route path="parents" element={<ParentsPage />} />
                         </Route>
+
                       </Route>
+
                     </Route>
+
                   </Route>
 
                   <Route path="/403" element={<Forbidden />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+
               </Suspense>
+
             </Router>
+
           </AuthProvider>
+
         </ToastProvider>
+
       </QueryClientProvider>
+
     </ErrorBoundary>
+
   );
 }

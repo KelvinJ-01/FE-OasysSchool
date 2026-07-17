@@ -25,7 +25,6 @@ export default function SubjectsPage() {
   const { toast } = useToast();
   const isAdmin = user?.role === 'administrator';
 
-
   const [pageNumber, setPageNumber] = useState(1);
   const listQuery = useSubjectsPageQuery({ page: pageNumber, pageSize: PAGE_SIZE });
   const { remove } = useSubjectMutations();
@@ -40,7 +39,6 @@ export default function SubjectsPage() {
   const { isOpen, openModal, closeModal } = useModal();
   const { isOpen: isImportOpen, openModal: openImportModal, closeModal: closeImportModal } = useModal();
   const [editing, setEditing] = useState<Subject | null>(null);
-
 
   async function confirmDelete() {
     if (!pendingDelete) return;
@@ -57,7 +55,9 @@ export default function SubjectsPage() {
 
   const columns: Column<Subject>[] = [
     { key: 'code', header: 'Kode', render: (s) => <span className="font-mono text-theme-xs text-gray-500">{s.code ?? '—'}</span> },
+
     { key: 'name', header: 'Nama Mata Pelajaran', render: (s) => <span className="font-medium text-gray-800 dark:text-white/90">{s.name}</span> },
+
     { key: 'teacherCount', header: 'Guru Pengampu', render: (s) => `${s.teacherNames?.length ?? 0} guru` },
     {
       key: 'teacherNames',
@@ -67,10 +67,13 @@ export default function SubjectsPage() {
           <div className="flex flex-wrap gap-1.5">
             {s.teacherNames.map((n) => (
               <span key={n} className="rounded-full bg-gray-100 px-2.5 py-0.5 text-theme-xs text-gray-600 dark:bg-white/5 dark:text-gray-300">{n}</span>
+
             ))}
           </div>
+
         ) : (
           <span className="text-gray-400">Belum ada</span>
+
         ),
     },
     ...(isAdmin
@@ -97,17 +100,22 @@ export default function SubjectsPage() {
             className="flex h-10 items-center gap-1.5 rounded-md border border-gray-300 bg-white px-4 text-theme-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5"
           >
             <Upload size={16} aria-hidden="true" />
+
             Impor
           </button>
+
           <button
             type="button"
             onClick={() => { setEditing(null); openModal(); }}
             className="flex h-10 items-center gap-1.5 rounded-md bg-brand-500 px-4 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600"
           >
             <Plus size={16} aria-hidden="true" />
+
             Tambah Mata Pelajaran
           </button>
+
         </div>
+
       )}
 
       {listError && <div role="alert" className="mb-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">{listError}</div>}
@@ -158,6 +166,7 @@ export default function SubjectsPage() {
         onCancel={() => setPendingDelete(null)}
       />
     </div>
+
   );
 }
 
@@ -216,7 +225,9 @@ function SubjectFormModal({ isOpen, onClose, subject, onSaved }: { isOpen: boole
     <Modal isOpen={isOpen} onClose={onClose} className="m-4 max-w-sm">
       <div className="p-6">
         <h3 className="mb-5 pr-10 text-theme-sm font-semibold text-gray-800 dark:text-white/90">{isEdit ? 'Ubah Mata Pelajaran' : 'Tambah Mata Pelajaran'}</h3>
+
         {error && <div role="alert" className="mb-4 rounded-md border border-error-200 bg-error-50 px-3.5 py-3 text-[13.5px] text-error-700">{error}</div>}
+
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
             <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Nama Mata Pelajaran<span aria-hidden="true" className="text-error-500"> *</span></label>
@@ -229,9 +240,12 @@ function SubjectFormModal({ isOpen, onClose, subject, onSaved }: { isOpen: boole
               placeholder="mis. Matematika"
               className="h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 text-[14px] text-gray-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             />
+
           </div>
+
           <div>
             <label className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Kode Mata Pelajaran</label>
+
             <input
               type="text"
               value={code}
@@ -239,11 +253,15 @@ function SubjectFormModal({ isOpen, onClose, subject, onSaved }: { isOpen: boole
               placeholder="mis. MTK-01"
               className="h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 text-[14px] text-gray-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             />
+
           </div>
+
           <div>
             <span className="mb-1.5 block text-[13.5px] font-medium text-gray-900 dark:text-white/90">Guru Pengampu</span>
+
             <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-gray-200 p-3 dark:border-gray-700">
               {teachers.length === 0 && <p className="text-theme-xs text-gray-400">Belum ada data guru.</p>}
+
               {teachers.map((t) => (
                 <label key={t.id} className="flex cursor-pointer items-center gap-2.5 text-[13.5px] text-gray-700 dark:text-gray-300">
                   <input
@@ -252,27 +270,40 @@ function SubjectFormModal({ isOpen, onClose, subject, onSaved }: { isOpen: boole
                     onChange={() => toggleTeacher(t.id)}
                     className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500/30"
                   />
+
                   {t.fullName}
                 </label>
+
               ))}
             </div>
+
             <p className="mt-1.5 text-theme-xs text-gray-400">Jumlah guru pengampu: {teacherIds.length}</p>
+
           </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="h-10 rounded-md px-4 text-theme-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5">Batal</button>
+
             <button type="submit" disabled={isSubmitting} className="h-10 rounded-md bg-brand-500 px-5 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-60">
               {isSubmitting ? (
                 <>
                   <Spinner size="sm" className="mr-2" />
+
                   Menyimpan...
                 </>
+
               ) : (
                 'Simpan'
               )}
             </button>
+
           </div>
+
         </form>
+
       </div>
+
     </Modal>
+
   );
 }
