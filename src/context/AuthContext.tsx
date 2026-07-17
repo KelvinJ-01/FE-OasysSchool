@@ -13,9 +13,7 @@ import {
 import {
   clearAllTokens,
   getAccessToken,
-  getRefreshToken,
   setAccessToken,
-  setRefreshToken,
 } from '../lib/tokenStorage';
 import type { AuthUser, JwtPayload, LoginRequest, LoginResponse } from '../types/auth';
 
@@ -82,20 +80,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const storedRefreshToken = getRefreshToken();
-      if (storedRefreshToken) {
-        try {
-          const { data } = await axios.post<LoginResponse>(
-            `${env.apiBaseUrl}/auth/refresh-token`,
-            { refreshToken: storedRefreshToken, platform: env.appPlatform },
-          );
-          setAccessToken(data.accessToken);
-          setRefreshToken(data.refreshToken);
-          const decoded = decodeUserFromToken(data.accessToken);
-          if (!cancelled) setUser(decoded);
-        } catch {
-          if (!cancelled) clearAllTokens();
-        }
+      // Refresh token kini cookie httpOnly, sehingga JavaScript TIDAK dapat
+      // memeriksa keberadaannya lebih dulu. Satu-satunya cara mengetahui apakah
+      // sesi masih hidup adalah mencoba menukarkannya: 401 berarti tidak ada
+      // sesi. Justru inilah yang membuat token tersebut aman dari XSS.
+      try {
+        const { data } = await axios.post<LoginResponse>(
+          `${env.apiBaseUrl}/auth/refresh-token`,
+          { platform: env.appPlatform },
+          { withCredentials: true },
+        );
+        setAccessToken(data.accessToken);
+        const decoded = decodeUserFromToken(data.accessToken);
+        if (!cancelled) setUser(decoded);
+      } catch {
+        if (!cancelled) clearAllTokens();
       }
 
       if (!cancelled) setIsLoading(false);
@@ -112,8 +111,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const { data } = await apiClient.post<LoginResponse>('/auth/login', payload);
+      // Hanya access token yang dipegang klien; refresh token dipasang backend
+      // sebagai cookie httpOnly pada respons ini.
       setAccessToken(data.accessToken);
-      setRefreshToken(data.refreshToken);
 
       const decoded = decodeUserFromToken(data.accessToken);
       setUser(decoded ?? { id: '', role: data.role, schoolId: data.schoolId });

@@ -11,26 +11,39 @@ export interface LoginRequest {
 export interface LoginResponse {
   accessToken: string;
   expiresIn: number;
-  refreshToken: string;
+  /** Hanya dikembalikan ke klien mobile; klien web menerimanya lewat cookie. */
+  refreshToken?: string;
   refreshExpiresIn: number;
   role: UserRole;
   schoolId: string | null;
 }
 
 export interface RefreshTokenRequest {
-  refreshToken: string;
+  /**
+   * Hanya diisi klien mobile. Klien web membiarkannya kosong: refresh token
+   * dikirim peramban sebagai cookie httpOnly, dan backend membacanya lewat
+   * custom extractor (cookie dulu, lalu body).
+   */
+  refreshToken?: string;
+  /**
+   * TETAP WAJIB. Backend mencocokkannya dengan platform asal token
+   * (refresh_tokens.platform) agar token mobile tidak dapat "dicairkan"
+   * menjadi sesi web — penegakan NFR-SEC.5 lewat jalur refresh.
+   */
   platform: Platform;
 }
 
 export interface RefreshTokenResponse {
   accessToken: string;
   expiresIn: number;
-  refreshToken: string;
+  /** Hanya dikembalikan ke klien mobile; klien web menerimanya lewat cookie. */
+  refreshToken?: string;
   refreshExpiresIn: number;
 }
 
 export interface LogoutRequest {
-  refreshToken: string;
+  /** Hanya diisi klien mobile; klien web mengandalkan cookie httpOnly. */
+  refreshToken?: string;
   allDevices?: boolean;
 }
 

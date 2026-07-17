@@ -3,20 +3,20 @@ import { jwtDecode } from 'jwt-decode';
 import { env } from '../config/env';
 import type { ApiErrorDetail, ApiErrorResponse } from '../types/api';
 import type { JwtPayload, RefreshTokenRequest, RefreshTokenResponse, LogoutRequest } from '../types/auth';
-import {
-  clearAllTokens,
-  getAccessToken,
-  getRefreshToken,
-  setAccessToken,
-  setRefreshToken,
-} from './tokenStorage';
+import { clearAllTokens, getAccessToken, setAccessToken } from './tokenStorage';
 
+/**
+ * `withCredentials` WAJIB: refresh token kini berupa cookie httpOnly, dan
+ * peramban hanya melampirkan cookie lintas-origin bila flag ini menyala.
+ * Tanpanya, /auth/refresh-token selalu menerima permintaan tanpa cookie dan
+ * setiap sesi mati begitu access token kedaluwarsa.
+ */
 export const apiClient = axios.create({
   baseURL: env.apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: false,
+  withCredentials: true,
 });
 
 function accessTokenNeedsRefresh(): boolean {
@@ -34,7 +34,10 @@ function accessTokenNeedsRefresh(): boolean {
 apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const isAuthEndpoint = config.url?.includes('/auth/');
 
-  if (!isAuthEndpoint && getRefreshToken() && accessTokenNeedsRefresh()) {
+  // Keberadaan refresh token TIDAK dapat diperiksa lagi: cookie httpOnly tidak
+  // terbaca JavaScript. Peremajaan dicoba berdasarkan kondisi access token saja;
+  // bila memang tidak ada sesi, refresh gagal dan ditelan diam-diam di bawah.
+  if (!isAuthEndpoint && getAccessToken() && accessTokenNeedsRefresh()) {
     try {
       await ensureFreshAccessToken();
     } catch {
@@ -59,16 +62,18 @@ export function registerUnauthorizedHandler(handler: UnauthorizedHandler): void 
 let refreshPromise: Promise<string> | null = null;
 
 async function performRefresh(): Promise<string> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) {
-    throw new Error('NO_REFRESH_TOKEN');
-  }
-
-  const body: RefreshTokenRequest = { refreshToken, platform: env.appPlatform };
-  const { data } = await axios.post<RefreshTokenResponse>(`${env.apiBaseUrl}/auth/refresh-token`, body);
+  // Refresh token tidak dikirim manual: peramban melampirkan cookie httpOnly-nya
+  // sendiri, dan backend merotasi cookie itu lewat Set-Cookie pada respons.
+  // `platform` TETAP dikirim — backend mencocokkannya dengan platform asal token
+  // (NFR-SEC.5) agar token mobile tidak dapat dicairkan menjadi sesi web.
+  const body: RefreshTokenRequest = { platform: env.appPlatform };
+  const { data } = await axios.post<RefreshTokenResponse>(
+    `${env.apiBaseUrl}/auth/refresh-token`,
+    body,
+    { withCredentials: true },
+  );
 
   setAccessToken(data.accessToken);
-  setRefreshToken(data.refreshToken);
   return data.accessToken;
 }
 
@@ -133,9 +138,9 @@ apiClient.interceptors.response.use(
 );
 
 export async function revokeSession(allDevices = false): Promise<void> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return;
-  const body: LogoutRequest = { refreshToken, allDevices };
+  // Cookie httpOnly ikut terkirim otomatis; backend mencabut tokennya sekaligus
+  // menghapus cookie lewat Set-Cookie Max-Age=0. `allDevices` tetap di body.
+  const body: LogoutRequest = { allDevices };
   await apiClient.post('/auth/logout', body);
 }
 
