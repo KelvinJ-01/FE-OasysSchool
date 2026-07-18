@@ -3,6 +3,16 @@ function readString(value: string | undefined, fallback: string): string {
   return trimmed && trimmed.length > 0 ? trimmed : fallback;
 }
 
+function readRequiredString(value: string | undefined, name: string): string {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    throw new Error(
+      `${name} belum diatur. Salin .env.example menjadi .env lalu isi alamat API backend sebelum menjalankan aplikasi.`,
+    );
+  }
+  return trimmed;
+}
+
 function readNumber(value: string | undefined, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -14,7 +24,7 @@ function readBool(value: string | undefined, fallback: boolean): boolean {
 }
 
 export const env = {
-  apiBaseUrl: readString(import.meta.env.VITE_API_BASE_URL, 'http://localhost:3000/api/v1'),
+  apiBaseUrl: readRequiredString(import.meta.env.VITE_API_BASE_URL, 'VITE_API_BASE_URL'),
   apiVersion: readString(import.meta.env.VITE_API_VERSION, 'v1'),
 
   appPlatform: readString(import.meta.env.VITE_APP_PLATFORM, 'web') as 'web' | 'mobile',

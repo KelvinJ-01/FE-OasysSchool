@@ -13,6 +13,39 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
+/**
+ * Endpoint autentikasi publik yang TIDAK boleh memicu logika refresh/Authorization.
+ * Dicocokkan dengan awalan path (bukan substring) supaya URL seperti
+ * `/schools/auth/anything` tidak keliru dianggap endpoint auth.
+ */
+const AUTH_PUBLIC_PATHS = [
+  '/auth/login',
+  '/auth/logout',
+  '/auth/refresh-token',
+  '/auth/password-resets',
+] as const;
+
+function normalizeRequestPath(url: string | undefined): string {
+  // Buang base URL absolut (bila ada) dan query string agar tersisa path murni.
+  const withoutQuery = (url ?? '').split('?')[0];
+  const stripped = withoutQuery.replace(env.apiBaseUrl, '');
+  return stripped.startsWith('/') ? stripped : `/${stripped}`;
+}
+
+function isAuthPublicPath(url: string | undefined): boolean {
+  const path = normalizeRequestPath(url);
+  return AUTH_PUBLIC_PATHS.some((p) => path.startsWith(p));
+}
+
+function isRefreshTokenPath(url: string | undefined): boolean {
+  return normalizeRequestPath(url).startsWith('/auth/refresh-token');
+}
+
+function isLoginOrLogoutPath(url: string | undefined): boolean {
+  const path = normalizeRequestPath(url);
+  return path.startsWith('/auth/login') || path.startsWith('/auth/logout');
+}
+
 function accessTokenNeedsRefresh(): boolean {
   const token = getAccessToken();
   if (!token) return true;
@@ -26,7 +59,7 @@ function accessTokenNeedsRefresh(): boolean {
 }
 
 apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
-  const isAuthEndpoint = config.url?.includes('/auth/');
+  const isAuthEndpoint = isAuthPublicPath(config.url);
 
   if (!isAuthEndpoint && getAccessToken() && accessTokenNeedsRefresh()) {
     try {
@@ -86,8 +119,8 @@ apiClient.interceptors.response.use(
       return apiClient(originalRequest);
     }
 
-    const isLoginOrLogout = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/logout');
-    const isRefreshEndpoint = requestUrl.includes('/auth/refresh-token');
+    const isLoginOrLogout = isLoginOrLogoutPath(requestUrl);
+    const isRefreshEndpoint = isRefreshTokenPath(requestUrl);
 
     if (isLoginOrLogout) {
       return Promise.reject(error);
